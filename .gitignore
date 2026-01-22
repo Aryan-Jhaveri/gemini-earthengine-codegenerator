@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# AI/Assistant notes
+claude.md
