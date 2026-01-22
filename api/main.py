@@ -139,21 +139,35 @@ async def websocket_endpoint(websocket: WebSocket):
     WebSocket endpoint for real-time thought streaming.
     Clients receive all agent thoughts as they happen.
     """
-    await websocket.accept()
-    active_connections.append(websocket)
-    
     try:
+        await websocket.accept()
+        active_connections.append(websocket)
+        print(f"WS: Accepted connection. Active: {len(active_connections)}")
+        
         # Stream thoughts from shared memory
         async for item in shared_memory.thought_stream():
             try:
                 await websocket.send_json(item)
-            except Exception:
+            except WebSocketDisconnect:
+                print("WS: Client disconnected during send")
+                break
+            except Exception as e:
+                print(f"WS: Error sending json: {e}")
                 break
     except WebSocketDisconnect:
-        active_connections.remove(websocket)
-    except Exception:
+        print("WS: Disconnected immediately")
         if websocket in active_connections:
             active_connections.remove(websocket)
+    except Exception as e:
+        print(f"WS: Critical Error: {e}")
+        import traceback
+        traceback.print_exc()
+        if websocket in active_connections:
+            active_connections.remove(websocket)
+    finally:
+        if websocket in active_connections:
+            active_connections.remove(websocket)
+        print("WS: Connection closed cleanup")
 
 
 @app.websocket("/ws/chat")

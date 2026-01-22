@@ -90,6 +90,19 @@ export default function Home() {
       const data = JSON.parse(event.data);
       if (data.type === "thought") {
         setThoughts((prev) => [...prev, data]);
+      } else if (data.type === "thought_stream") {
+        setThoughts((prev) => {
+          const last = prev[prev.length - 1];
+          // Only append if the last thought is from the same agent, implies continuity
+          if (last && last.agent === data.agent) {
+            const updatedLast = { ...last, content: last.content + data.content };
+            return [...prev.slice(0, -1), updatedLast];
+          } else {
+            // Fallback if stream starts without a thought (shouldn't happen with my backend change)
+            // or if agent switched
+            return [...prev, { agent: data.agent, content: data.content, timestamp: data.timestamp }];
+          }
+        });
       } else if (data.agent) {
         setThoughts((prev) => [...prev, data as Thought]);
       }
@@ -433,8 +446,8 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${activeTab === tab.id
-                      ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800"
                     }`}
                 >
                   <span>{tab.icon}</span>

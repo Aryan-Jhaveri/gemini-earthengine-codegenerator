@@ -7,7 +7,9 @@ Refines scripts when user asks.
 Answers questions using stored context.
 """
 
-import google.generativeai as genai
+import google.generativeai as genai_deprecated # Keep for legacy
+from google import genai
+from google.genai import types
 from typing import Optional
 import os
 
@@ -28,7 +30,7 @@ class ChatAgent:
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
-        genai.configure(api_key=self.api_key)
+        # genai.configure(api_key=self.api_key)
         
         self.model_name = "gemini-3-pro-preview"
         
@@ -88,6 +90,12 @@ For questions about existing work, use the stored context."""
             if shared_memory.get_latest_script():
                 return "refine_script"
         
+        # Check for explicit form submission (broadened)
+        if "objective" in message_lower and "latitude" in message_lower:
+            return "new_analysis"
+        if "research objective:" in message_lower:
+            return "new_analysis"
+        
         # Check for new analysis
         if any(kw in message_lower for kw in analysis_keywords):
             return "new_analysis"
@@ -146,12 +154,19 @@ For questions about existing work, use the stored context."""
             response_text = f"I encountered an error: {code_result['error']}"
             return {"type": "error", "content": response_text}
         
-        # Build response
-        response_text = f"""I've generated an Earth Engine script for your analysis.
+        # Build response: Include the full research methodology so frontend can display it
+        research_text = research_result.get("research", "No methodology available.")
+        
+        response_text = f"""{research_text}
+        
+---
+**Analysis Summary**
+
+I've generated an Earth Engine script for your analysis based on the methodology above.
 
 **Datasets used:** {', '.join(code_result.get('datasets_used', [])[:3])}
 
-You can copy the script below and paste it into the [Earth Engine Code Editor](https://code.earthengine.google.com)."""
+You can copy the script from the 'Generated Code' tab and paste it into the [Earth Engine Code Editor](https://code.earthengine.google.com)."""
         
         shared_memory.add_conversation_turn("assistant", response_text)
         
@@ -220,12 +235,14 @@ Recent Code Outputs:
 Provide a helpful answer based on this context.
 """
         
-        model = genai.GenerativeModel(
-            model_name=self.model_name,
-            system_instruction=self.system_prompt
+        client = genai.Client(api_key=self.api_key)
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=self.system_prompt
+            )
         )
-        
-        response = model.generate_content(prompt)
         answer = response.text
         
         shared_memory.add_conversation_turn("assistant", answer)
@@ -239,10 +256,7 @@ Provide a helpful answer based on this context.
         """Handle general conversation."""
         self._stream_thought("General conversation...")
         
-        model = genai.GenerativeModel(
-            model_name=self.model_name,
-            system_instruction=self.system_prompt
-        )
+        client = genai.Client(api_key=self.api_key)
         
         # Include recent conversation for context
         history = shared_memory.conversation_history[-5:]
@@ -257,7 +271,13 @@ User: {message}
 Respond helpfully.
 """
         
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=self.system_prompt
+            )
+        )
         answer = response.text
         
         shared_memory.add_conversation_turn("assistant", answer)

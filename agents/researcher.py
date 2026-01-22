@@ -8,8 +8,9 @@ Uses Gemini Deep Research + Google Search grounding to:
 4. Answer questions from Coder agent autonomously
 """
 
-import google.generativeai as genai
-from google.generativeai import types
+import google.generativeai as genai_deprecated # Keep for legacy if needed, or remove
+from google import genai
+from google.genai import types
 from typing import Optional
 import os
 
@@ -30,7 +31,7 @@ class ResearcherAgent:
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
-        genai.configure(api_key=self.api_key)
+        # genai.configure(api_key=self.api_key) # Deprecated in favor of Client(api_key=...)
         
         # Model for Deep Research (asynchronous, comprehensive)
         self.deep_research_model = "gemini-3-pro-preview"
@@ -134,31 +135,46 @@ Format as structured JSON.
         self._stream_thought("Consulting Gemini for methodology research...")
         
         try:
+            client = genai.Client(api_key=self.api_key)
+            
             if use_deep_research:
                 # Use Deep Research for comprehensive analysis
                 self._stream_thought("Using Deep Research mode (this may take a few minutes)...")
                 
-                client = genai.Client(api_key=self.api_key)
-                config = types.GenerateContentConfig(
-                    tools=[types.Tool(google_search=types.GoogleSearch())],
-                    response_modalities=["TEXT"]
-                )
-                
+                # Note: 'google_search' tool in new SDK
                 response = await client.aio.models.generate_content(
                     model=self.deep_research_model,
                     contents=research_prompt,
-                    config=config
+                    config=types.GenerateContentConfig(
+                        tools=[types.Tool(google_search=types.GoogleSearch())],
+                    )
                 )
-                
-                research_result = response.text
             else:
                 # Use quick model with search grounding
-                model = genai.GenerativeModel(
-                    model_name=self.quick_model,
-                    system_instruction=self.system_prompt
+                response = await client.aio.models.generate_content(
+                    model=self.quick_model,
+                    contents=research_prompt,
+                    config=types.GenerateContentConfig(
+                        tools=[types.Tool(google_search=types.GoogleSearch())],
+                    )
                 )
-                response = model.generate_content(research_prompt)
-                research_result = response.text
+            
+            research_result = response.text
+            
+            # Extract grounding metadata (sources)
+            sources = []
+            if response.candidates and response.candidates[0].grounding_metadata:
+                gm = response.candidates[0].grounding_metadata
+                if gm.grounding_chunks:
+                    for chunk in gm.grounding_chunks:
+                        if chunk.web:
+                            sources.append(f"{chunk.web.title}: {chunk.web.uri}")
+            
+            # Append sources to the report if found
+            if sources:
+                source_text = "\n\n**Sources:**\n" + "\n".join([f"- {s}" for s in sources])
+                research_result += source_text
+                self._stream_thought(f"Found {len(sources)} sources.")
             
             self._stream_thought("Research complete!")
             
@@ -166,14 +182,16 @@ Format as structured JSON.
             shared_memory.set_research_context("latest_research", {
                 "query": query,
                 "result": research_result,
-                "ee_data": ee_data
+                "ee_data": ee_data,
+                "sources": sources
             })
             
             return {
                 "query": query,
                 "research": research_result,
                 "datasets": ee_data["datasets"],
-                "schemas": ee_data["schemas"]
+                "schemas": ee_data["schemas"],
+                "sources": sources
             }
             
         except Exception as e:
@@ -229,11 +247,14 @@ Previous Research Context:
 Provide a clear, helpful answer that the Coder agent can use.
 """
         
-        model = genai.GenerativeModel(
-            model_name=self.quick_model,
-            system_instruction=self.system_prompt
+        client = genai.Client(api_key=self.api_key)
+        response = client.models.generate_content(
+            model=self.quick_model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=self.system_prompt
+            )
         )
-        response = model.generate_content(prompt)
         answer = response.text
         
         self._stream_thought(f"Answering: {answer[:100]}...")

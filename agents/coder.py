@@ -6,7 +6,9 @@ Has access to EE tools for real-time schema verification.
 Can ask Researcher agent questions when needed.
 """
 
-import google.generativeai as genai
+import google.generativeai as genai_deprecated # Keep for legacy
+from google import genai
+from google.genai import types
 from typing import Optional
 import os
 import re
@@ -28,7 +30,7 @@ class CoderAgent:
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
-        genai.configure(api_key=self.api_key)
+        # genai.configure(api_key=self.api_key)
         
         # Model with Thinking capability
         self.model_name = "gemini-3-pro-preview"
@@ -37,14 +39,13 @@ class CoderAgent:
 
 Your task is to generate complete, copy-paste ready Earth Engine scripts.
 
-Rules:
-1. Always use exact band names from the schema provided
-2. Include cloud masking for optical imagery
-3. Add clear comments explaining each step
-4. Use proper date filtering
-5. Always add Map.addLayer() to visualize results
-6. Set appropriate visualization parameters
-7. Export results to Drive when appropriate
+CRITICAL REQUIREMENTS:
+1.  **Visualizations**: You MUST defined `visParams` with min, max, and specific color palettes.
+2.  **Legends**: Add a legend to the map using `ui.Panel` and `ui.Label` to explain the colors.
+3.  **Cloud Masking**: You MUST include a cloud masking function for any optical data (Sentinel-2, Landsat).
+4.  **Date Filtering**: Use specific date ranges.
+5.  **Best Practices**: Add comments explaining every major step.
+6.  **Geometry**: If no geometry is provided, create a `point` or `bounds` geometry from the coordinates.
 
 Output format:
 - Return ONLY the JavaScript code
@@ -53,8 +54,12 @@ Output format:
 - No markdown code blocks, just raw code"""
 
     def _stream_thought(self, content: str) -> None:
-        """Stream a thought to shared memory."""
+        """Stream a completed thought to shared memory."""
         shared_memory.add_thought(AgentType.CODER, content)
+
+    def _stream_chunk(self, content: str) -> None:
+        """Stream a chunk of text to shared memory."""
+        shared_memory.add_stream_update(AgentType.CODER, content)
     
     def _get_ee_context(self, dataset_ids: list[str]) -> dict:
         """Get schema and preview for datasets."""
@@ -156,28 +161,64 @@ Return ONLY the JavaScript code, no explanations.
         self._stream_thought("Generating code with Thinking Mode...")
         
         try:
-            model = genai.GenerativeModel(
-                model_name=self.model_name,
+            client = genai.Client(api_key=self.api_key)
+            
+            prompt_content = prompt
+            
+            # Streaming generation
+            # new SDK: client.models.generate_content_stream
+            
+            # Config
+            config = types.GenerateContentConfig(
+                temperature=0.7,
+                top_p=0.95,
                 system_instruction=self.system_prompt
             )
+
+            # We'll collect the full code
+            full_response_text = ""
             
-            if use_thinking:
-                # Use thinking config for step-by-step reasoning
-                generation_config = genai.GenerationConfig(
-                    temperature=0.7,
-                    top_p=0.95,
+            # Using generate_content_stream
+            response_stream = client.models.generate_content_stream(
+                model=self.model_name,
+                contents=prompt_content,
+                config=config
+            )
+
+            # We'll collect the full code
+            full_response_text = ""
+            
+            # Using generate_content_stream
+            response_stream = client.models.generate_content_stream(
+                model=self.model_name,
+                contents=prompt_content,
+                config=config
+            )
+
+            # Initialize a thought bubble for the stream
+            self._stream_thought("Thinking Process Started")
+
+            for chunk in response_stream:
+                if chunk.text:
+                    text_chunk = chunk.text
+                    full_response_text += text_chunk
+                    
+                    # Stream EXACT chunks as requested by user
+                    self._stream_chunk(text_chunk)
+            
+            code = full_response_text
+            
+            # Get token usage if available (requires iterating to end)
+            try:
+                count_resp = client.models.count_tokens(
+                    model=self.model_name,
+                    contents=prompt_content
                 )
+                self._stream_thought(f"Token Analysis - Input Token Count: {count_resp.total_tokens}")
                 
-                # Generate with thinking
-                response = model.generate_content(
-                    prompt,
-                    generation_config=generation_config
-                )
-            else:
-                response = model.generate_content(prompt)
-            
-            code = response.text
-            
+            except Exception as tok_err:
+                print(f"Token count error: {tok_err}")
+
             # Clean up code (remove markdown if present)
             code = self._clean_code(code)
             
@@ -194,7 +235,8 @@ Return ONLY the JavaScript code, no explanations.
                 "code": code,
                 "description": task,
                 "datasets_used": dataset_ids,
-                "schemas": ee_context
+                "schemas": ee_context,
+                "token_usage": count_resp.total_tokens if 'count_resp' in locals() else None
             }
             
         except Exception as e:
@@ -234,12 +276,15 @@ Provide the updated script with the requested changes.
 Return ONLY the JavaScript code.
 """
         
-        model = genai.GenerativeModel(
-            model_name=self.model_name,
-            system_instruction=self.system_prompt
-        )
+        client = genai.Client(api_key=self.api_key)
         
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=self.system_prompt
+            )
+        )
         refined_code = self._clean_code(response.text)
         
         # Update stored script

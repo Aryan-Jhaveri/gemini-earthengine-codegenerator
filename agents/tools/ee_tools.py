@@ -10,15 +10,24 @@ from typing import Any, Optional
 from functools import lru_cache
 
 
+import os
+
 def initialize_ee() -> bool:
     """Initialize Earth Engine. Returns True if successful."""
     try:
-        ee.Initialize()
+        project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("EE_PROJECT_ID")
+        if project:
+            ee.Initialize(project=project)
+        else:
+            ee.Initialize()
         return True
     except Exception:
         try:
             ee.Authenticate()
-            ee.Initialize()
+            if project:
+                ee.Initialize(project=project)
+            else:
+                ee.Initialize()
             return True
         except Exception as e:
             print(f"Failed to initialize Earth Engine: {e}")

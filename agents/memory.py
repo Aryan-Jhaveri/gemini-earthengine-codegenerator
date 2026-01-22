@@ -134,6 +134,22 @@ class SharedMemory:
         
         return thought
     
+    def add_stream_update(self, agent: AgentType, content_chunk: str, metadata: dict = None) -> None:
+        """Stream a partial update (token/chunk) without creating a new thought."""
+        data = {
+            "type": "thought_stream",
+            "agent": agent.value,
+            "content": content_chunk,
+            "timestamp": datetime.now().isoformat(),
+            "metadata": metadata or {}
+        }
+        
+        # Add to async stream queue
+        try:
+            self._stream_queue.put_nowait(data)
+        except asyncio.QueueFull:
+            pass
+    
     def add_agent_message(
         self,
         from_agent: AgentType,
