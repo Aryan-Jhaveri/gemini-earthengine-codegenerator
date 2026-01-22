@@ -33,10 +33,10 @@ class ResearcherAgent:
         genai.configure(api_key=self.api_key)
         
         # Model for Deep Research (asynchronous, comprehensive)
-        self.deep_research_model = "gemini-3-pro"
+        self.deep_research_model = "gemini-1.5-pro"
         
         # Model for quick responses
-        self.quick_model = "gemini-3-pro"
+        self.quick_model = "gemini-1.5-pro"
         
         self.system_prompt = """You are a Geospatial Research Agent specialized in Google Earth Engine analysis.
 

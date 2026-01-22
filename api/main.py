@@ -18,6 +18,10 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
 from agents.orchestrator import orchestrator
 from agents.memory import shared_memory
 from agents.chat_agent import chat_agent
@@ -80,6 +84,8 @@ async def chat(request: ChatRequest):
             datasets=result.get("datasets")
         )
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

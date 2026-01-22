@@ -31,7 +31,7 @@ class CoderAgent:
         genai.configure(api_key=self.api_key)
         
         # Model with Thinking capability
-        self.model_name = "gemini-3-pro"
+        self.model_name = "gemini-1.5-pro"
         
         self.system_prompt = """You are an expert Google Earth Engine JavaScript programmer.
 
