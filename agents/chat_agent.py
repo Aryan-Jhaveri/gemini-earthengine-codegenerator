@@ -30,7 +30,7 @@ class ChatAgent:
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         genai.configure(api_key=self.api_key)
         
-        self.model_name = "gemini-2.5-flash-preview-05-20"
+        self.model_name = "gemini-3-pro"
         
         self.system_prompt = """You are a helpful Geospatial Analysis Assistant for Google Earth Engine.
 
