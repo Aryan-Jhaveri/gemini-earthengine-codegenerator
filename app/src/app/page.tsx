@@ -33,13 +33,14 @@ interface FormData {
 }
 
 type ViewState = "form" | "thinking" | "dashboard";
-type DashboardTab = "overview" | "methodology" | "code" | "logs";
+type DashboardTab = "overview" | "methodology" | "code" | "logs" | "chat";
 
 const tabs: { id: DashboardTab; label: string; icon: string }[] = [
   { id: "overview", label: "Overview", icon: "📊" },
   { id: "methodology", label: "Methodology & Sources", icon: "📚" },
   { id: "code", label: "Generated Code", icon: "💻" },
   { id: "logs", label: "Thought Logs", icon: "🧠" },
+  { id: "chat", label: "Refine & Chat", icon: "💬" },
 ];
 
 const getAgentIcon = (agent: string) => {
@@ -83,8 +84,12 @@ export default function Home() {
   const [connected, setConnected] = useState(false);
   const [viewState, setViewState] = useState<ViewState>("form");
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
+  const [chatMessages, setChatMessages] = useState<{ role: string; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const thoughtsEndRef = useRef<HTMLDivElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Connect to WebSocket for real-time thought streaming
   useEffect(() => {
@@ -213,6 +218,48 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
     setViewState("form");
     setResult(null);
     setThoughts([]);
+    setChatMessages([]);
+  };
+
+  // Auto-scroll chat messages
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
+
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setChatLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage }),
+      });
+
+      const data = await response.json();
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.content, code: data.code },
+      ]);
+
+      // If new code was generated, update result
+      if (data.code) {
+        setResult((prev) => ({ ...prev!, code: data.code }));
+      }
+    } catch (error) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Error communicating with the agent. Please try again." },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   return (
@@ -657,12 +704,12 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                         <div
                           key={i}
                           className={`p-4 rounded-xl border ${thought.type === "source"
-                              ? "bg-cyan-900/20 border-cyan-700/40"
-                              : thought.type === "tool_call"
-                                ? "bg-amber-900/20 border-amber-700/40"
-                                : thought.type === "search_query"
-                                  ? "bg-purple-900/20 border-purple-700/40"
-                                  : "bg-slate-800/50 border-slate-700/30"
+                            ? "bg-cyan-900/20 border-cyan-700/40"
+                            : thought.type === "tool_call"
+                              ? "bg-amber-900/20 border-amber-700/40"
+                              : thought.type === "search_query"
+                                ? "bg-purple-900/20 border-purple-700/40"
+                                : "bg-slate-800/50 border-slate-700/30"
                             }`}
                         >
                           <div className="flex items-center gap-2 mb-2">
@@ -674,9 +721,9 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                             </span>
                             {thought.type && thought.type !== "thought" && (
                               <span className={`text-xs px-2 py-0.5 rounded-full ${thought.type === "source" ? "bg-cyan-800/50 text-cyan-300"
-                                  : thought.type === "tool_call" ? "bg-amber-800/50 text-amber-300"
-                                    : thought.type === "search_query" ? "bg-purple-800/50 text-purple-300"
-                                      : "bg-slate-700/50 text-slate-300"
+                                : thought.type === "tool_call" ? "bg-amber-800/50 text-amber-300"
+                                  : thought.type === "search_query" ? "bg-purple-800/50 text-purple-300"
+                                    : "bg-slate-700/50 text-slate-300"
                                 }`}>
                                 {thought.type}
                               </span>
@@ -701,6 +748,97 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                       ))
                     )}
                   </div>
+                </div>
+              )}
+
+              {activeTab === "chat" && (
+                <div className="p-6 flex flex-col h-[70vh]">
+                  <div className="mb-4">
+                    <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2">
+                      <span>💬</span> Refine & Chat
+                    </h2>
+                    <p className="text-sm text-slate-400 mt-1">
+                      Ask questions, request modifications, or get help understanding the analysis
+                    </p>
+                  </div>
+
+                  {/* Chat Messages */}
+                  <div className="flex-1 overflow-y-auto space-y-4 mb-4 bg-slate-950/50 rounded-xl p-4 border border-slate-800/50">
+                    {chatMessages.length === 0 ? (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="text-center space-y-3">
+                          <div className="text-5xl">💬</div>
+                          <p className="text-slate-500">Start a conversation to refine your analysis</p>
+                          <div className="text-sm text-slate-600 space-y-1">
+                            <p>• Ask about methodology choices</p>
+                            <p>• Request code modifications</p>
+                            <p>• Get clarification on datasets</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {chatMessages.map((msg, i) => (
+                          <div
+                            key={i}
+                            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                          >
+                            <div
+                              className={`max-w-[80%] rounded-xl p-4 ${msg.role === "user"
+                                  ? "bg-gradient-to-br from-cyan-600 to-blue-600 text-white"
+                                  : "bg-slate-800/80 border border-slate-700/50"
+                                }`}
+                            >
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-semibold">
+                                  {msg.role === "user" ? "You" : "🤖 Agent"}
+                                </span>
+                              </div>
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                {msg.content}
+                              </p>
+                              {(msg as any).code && (
+                                <div className="mt-3 p-3 bg-slate-950 rounded-lg border border-slate-700/50">
+                                  <div className="text-xs text-slate-400 mb-2 flex items-center justify-between">
+                                    <span>Updated Code:</span>
+                                    <button
+                                      onClick={() => setActiveTab("code")}
+                                      className="text-cyan-400 hover:text-cyan-300"
+                                    >
+                                      View Full →
+                                    </button>
+                                  </div>
+                                  <pre className="text-xs text-slate-300 overflow-x-auto max-h-32">
+                                    <code>{(msg as any).code.slice(0, 200)}...</code>
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={chatEndRef} />
+                      </>
+                    )}
+                  </div>
+
+                  {/* Chat Input */}
+                  <form onSubmit={handleChatSubmit} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Ask a question or request modifications..."
+                      disabled={chatLoading}
+                      className="flex-1 bg-slate-900/80 border border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all disabled:opacity-50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!chatInput.trim() || chatLoading}
+                      className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-semibold transition-all shadow-lg shadow-cyan-500/20"
+                    >
+                      {chatLoading ? "..." : "Send"}
+                    </button>
+                  </form>
                 </div>
               )}
             </div>
