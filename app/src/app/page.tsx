@@ -9,9 +9,18 @@ interface AnalysisResult {
 }
 
 interface Thought {
+  type?: string;  // thought, source, search_query, tool_call
   agent: string;
   content: string;
   timestamp: string;
+  // For source events
+  title?: string;
+  uri?: string;
+  // For search_query events
+  query?: string;
+  // For tool_call events
+  tool?: string;
+  description?: string;
 }
 
 interface FormData {
@@ -94,15 +103,43 @@ export default function Home() {
         setThoughts((prev) => {
           const last = prev[prev.length - 1];
           // Only append if the last thought is from the same agent, implies continuity
-          if (last && last.agent === data.agent) {
+          if (last && last.agent === data.agent && last.type !== "source" && last.type !== "tool_call") {
             const updatedLast = { ...last, content: last.content + data.content };
             return [...prev.slice(0, -1), updatedLast];
           } else {
-            // Fallback if stream starts without a thought (shouldn't happen with my backend change)
-            // or if agent switched
-            return [...prev, { agent: data.agent, content: data.content, timestamp: data.timestamp }];
+            // Fallback if stream starts without a thought or agent switched
+            return [...prev, { type: "thought", agent: data.agent, content: data.content, timestamp: data.timestamp }];
           }
         });
+      } else if (data.type === "source") {
+        // Grounding source with URL
+        setThoughts((prev) => [...prev, {
+          type: "source",
+          agent: data.agent,
+          content: `📎 ${data.title}`,
+          title: data.title,
+          uri: data.uri,
+          timestamp: data.timestamp
+        }]);
+      } else if (data.type === "search_query") {
+        // Google Search query used
+        setThoughts((prev) => [...prev, {
+          type: "search_query",
+          agent: data.agent,
+          content: `🔍 Searched: "${data.query}"`,
+          query: data.query,
+          timestamp: data.timestamp
+        }]);
+      } else if (data.type === "tool_call") {
+        // Tool invocation
+        setThoughts((prev) => [...prev, {
+          type: "tool_call",
+          agent: data.agent,
+          content: `🔧 ${data.tool}${data.description ? `: ${data.description}` : ""}`,
+          tool: data.tool,
+          description: data.description,
+          timestamp: data.timestamp
+        }]);
       } else if (data.agent) {
         setThoughts((prev) => [...prev, data as Thought]);
       }
@@ -399,7 +436,14 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                   thoughts.map((thought, i) => (
                     <div
                       key={i}
-                      className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/30 animate-fadeIn"
+                      className={`p-3 rounded-xl border animate-fadeIn ${thought.type === "source"
+                        ? "bg-cyan-900/20 border-cyan-700/40"
+                        : thought.type === "tool_call"
+                          ? "bg-amber-900/20 border-amber-700/40"
+                          : thought.type === "search_query"
+                            ? "bg-purple-900/20 border-purple-700/40"
+                            : "bg-slate-800/50 border-slate-700/30"
+                        }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-lg">{getAgentIcon(thought.agent)}</span>
@@ -408,13 +452,33 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                         >
                           {thought.agent}
                         </span>
+                        {thought.type && thought.type !== "thought" && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${thought.type === "source" ? "bg-cyan-800/50 text-cyan-300"
+                            : thought.type === "tool_call" ? "bg-amber-800/50 text-amber-300"
+                              : thought.type === "search_query" ? "bg-purple-800/50 text-purple-300"
+                                : "bg-slate-700/50 text-slate-300"
+                            }`}>
+                            {thought.type}
+                          </span>
+                        )}
                         <span className="text-xs text-slate-600">
                           {new Date(thought.timestamp).toLocaleTimeString()}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-300 leading-relaxed">
-                        {thought.content}
-                      </p>
+                      {thought.type === "source" && thought.uri ? (
+                        <a
+                          href={thought.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-cyan-300 hover:text-cyan-200 hover:underline leading-relaxed"
+                        >
+                          {thought.content} ↗
+                        </a>
+                      ) : (
+                        <p className="text-sm text-slate-300 leading-relaxed">
+                          {thought.content}
+                        </p>
+                      )}
                     </div>
                   ))
                 )}
@@ -592,7 +656,14 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                       thoughts.map((thought, i) => (
                         <div
                           key={i}
-                          className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/30"
+                          className={`p-4 rounded-xl border ${thought.type === "source"
+                              ? "bg-cyan-900/20 border-cyan-700/40"
+                              : thought.type === "tool_call"
+                                ? "bg-amber-900/20 border-amber-700/40"
+                                : thought.type === "search_query"
+                                  ? "bg-purple-900/20 border-purple-700/40"
+                                  : "bg-slate-800/50 border-slate-700/30"
+                            }`}
                         >
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-lg">{getAgentIcon(thought.agent)}</span>
@@ -601,11 +672,31 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                             >
                               {thought.agent}
                             </span>
+                            {thought.type && thought.type !== "thought" && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${thought.type === "source" ? "bg-cyan-800/50 text-cyan-300"
+                                  : thought.type === "tool_call" ? "bg-amber-800/50 text-amber-300"
+                                    : thought.type === "search_query" ? "bg-purple-800/50 text-purple-300"
+                                      : "bg-slate-700/50 text-slate-300"
+                                }`}>
+                                {thought.type}
+                              </span>
+                            )}
                             <span className="text-xs text-slate-600">
                               {new Date(thought.timestamp).toLocaleTimeString()}
                             </span>
                           </div>
-                          <p className="text-sm text-slate-300">{thought.content}</p>
+                          {thought.type === "source" && thought.uri ? (
+                            <a
+                              href={thought.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-cyan-300 hover:text-cyan-200 hover:underline"
+                            >
+                              {thought.content} ↗
+                            </a>
+                          ) : (
+                            <p className="text-sm text-slate-300">{thought.content}</p>
+                          )}
                         </div>
                       ))
                     )}

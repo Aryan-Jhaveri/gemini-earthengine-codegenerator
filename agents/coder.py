@@ -66,11 +66,11 @@ Output format:
         context = {}
         
         for dataset_id in dataset_ids:
-            self._stream_thought(f"Verifying schema for {dataset_id}")
+            shared_memory.add_tool_call(AgentType.CODER, "get_band_schema", dataset_id)
             schema = get_band_schema(dataset_id)
             if "error" not in schema:
                 context[dataset_id] = schema
-                self._stream_thought(f"Bands available: {schema.get('band_names', [])}")
+                self._stream_thought(f"📊 Bands: {schema.get('band_names', [])}")
         
         return context
     

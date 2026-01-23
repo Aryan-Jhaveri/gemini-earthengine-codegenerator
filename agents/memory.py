@@ -27,6 +27,10 @@ class MessageType(str, Enum):
     ANSWER = "answer"
     USER_MESSAGE = "user_message"
     AGENT_RESPONSE = "agent_response"
+    SOURCE = "source"  # Grounding source with URL
+    SEARCH_QUERY = "search_query"  # Google Search query used
+    TOOL_CALL = "tool_call"  # Tool invocation
+    METHODOLOGY = "methodology"  # Synthesized methodology section
 
 
 @dataclass
@@ -145,6 +149,70 @@ class SharedMemory:
         }
         
         # Add to async stream queue
+        try:
+            self._stream_queue.put_nowait(data)
+        except asyncio.QueueFull:
+            pass
+    
+    def add_source(self, agent: AgentType, title: str, uri: str) -> None:
+        """Stream a grounding source with URL."""
+        data = {
+            "type": "source",
+            "agent": agent.value,
+            "title": title,
+            "uri": uri,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Also add as a thought for persistence
+        self.thoughts.append(Thought(
+            agent=agent,
+            content=f"📎 Source: {title}",
+            metadata={"uri": uri, "title": title}
+        ))
+        
+        try:
+            self._stream_queue.put_nowait(data)
+        except asyncio.QueueFull:
+            pass
+    
+    def add_search_query(self, agent: AgentType, query: str) -> None:
+        """Stream a Google Search query that was used."""
+        data = {
+            "type": "search_query",
+            "agent": agent.value,
+            "query": query,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Also add as a thought for persistence
+        self.thoughts.append(Thought(
+            agent=agent,
+            content=f"🔍 Searched: {query}",
+            metadata={"query": query}
+        ))
+        
+        try:
+            self._stream_queue.put_nowait(data)
+        except asyncio.QueueFull:
+            pass
+    
+    def add_tool_call(self, agent: AgentType, tool_name: str, description: str = "") -> None:
+        """Stream a tool invocation event."""
+        data = {
+            "type": "tool_call",
+            "agent": agent.value,
+            "tool": tool_name,
+            "description": description,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        self.thoughts.append(Thought(
+            agent=agent,
+            content=f"🔧 Calling: {tool_name}" + (f" - {description}" if description else ""),
+            metadata={"tool": tool_name}
+        ))
+        
         try:
             self._stream_queue.put_nowait(data)
         except asyncio.QueueFull:

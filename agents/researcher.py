@@ -67,7 +67,7 @@ Always provide structured output with:
     
     def _use_ee_tools(self, query: str) -> dict:
         """Use Earth Engine tools to gather dataset information."""
-        self._stream_thought(f"Searching for datasets related to: {query}")
+        shared_memory.add_tool_call(AgentType.RESEARCHER, "browse_datasets", query[:50])
         
         results = {
             "datasets": [],
@@ -78,12 +78,12 @@ Always provide structured output with:
         # Browse for relevant datasets
         datasets = browse_datasets(query)
         results["datasets"] = datasets
-        self._stream_thought(f"Found {len(datasets)} relevant datasets")
+        self._stream_thought(f"📂 Found {len(datasets)} relevant datasets")
         
         # Get schema for top datasets
         for ds in datasets[:3]:
             dataset_id = ds["id"]
-            self._stream_thought(f"Getting schema for {dataset_id}")
+            shared_memory.add_tool_call(AgentType.RESEARCHER, "get_band_schema", dataset_id)
             schema = get_band_schema(dataset_id)
             if "error" not in schema:
                 results["schemas"][dataset_id] = schema
@@ -132,7 +132,7 @@ Provide a comprehensive research report including:
 Format as structured JSON.
 """
         
-        self._stream_thought("Consulting Gemini for methodology research...")
+        self._stream_thought("Consulting Gemini with Google Search grounding...")
         
         try:
             client = genai.Client(api_key=self.api_key)
@@ -161,20 +161,41 @@ Format as structured JSON.
             
             research_result = response.text
             
-            # Extract grounding metadata (sources)
+            # Extract and stream grounding metadata (sources)
             sources = []
+            search_queries = []
+            
             if response.candidates and response.candidates[0].grounding_metadata:
                 gm = response.candidates[0].grounding_metadata
+                
+                # Stream search queries that were used
+                if hasattr(gm, 'web_search_queries') and gm.web_search_queries:
+                    for query in gm.web_search_queries:
+                        search_queries.append(query)
+                        shared_memory.add_search_query(AgentType.RESEARCHER, query)
+                
+                # Stream grounding sources with URLs
                 if gm.grounding_chunks:
                     for chunk in gm.grounding_chunks:
                         if chunk.web:
-                            sources.append(f"{chunk.web.title}: {chunk.web.uri}")
+                            source_info = {
+                                "title": chunk.web.title,
+                                "uri": chunk.web.uri
+                            }
+                            sources.append(source_info)
+                            shared_memory.add_source(
+                                AgentType.RESEARCHER,
+                                chunk.web.title,
+                                chunk.web.uri
+                            )
             
             # Append sources to the report if found
             if sources:
-                source_text = "\n\n**Sources:**\n" + "\n".join([f"- {s}" for s in sources])
+                source_text = "\n\n**Sources:**\n" + "\n".join([
+                    f"- [{s['title']}]({s['uri']})" for s in sources
+                ])
                 research_result += source_text
-                self._stream_thought(f"Found {len(sources)} sources.")
+                self._stream_thought(f"✅ Found {len(sources)} grounded sources")
             
             self._stream_thought("Research complete!")
             
@@ -183,7 +204,8 @@ Format as structured JSON.
                 "query": query,
                 "result": research_result,
                 "ee_data": ee_data,
-                "sources": sources
+                "sources": sources,
+                "search_queries": search_queries
             })
             
             return {
@@ -191,7 +213,8 @@ Format as structured JSON.
                 "research": research_result,
                 "datasets": ee_data["datasets"],
                 "schemas": ee_data["schemas"],
-                "sources": sources
+                "sources": sources,
+                "search_queries": search_queries
             }
             
         except Exception as e:
