@@ -101,9 +101,11 @@ Always provide structured output with:
         Returns:
             Research results dict
         """
-        self._stream_thought(f"Starting research: {query}")
+        self._stream_thought("🔬 Research Phase [1/5]: Initializing...")
+        self._stream_thought(f"Query: {query}")
         
         # First, gather EE tool data
+        self._stream_thought("📂 Research Phase [2/5]: Gathering Earth Engine datasets...")
         ee_data = self._use_ee_tools(query)
         
         # Build context from EE tools
@@ -132,7 +134,8 @@ Provide a comprehensive research report including:
 Format as structured JSON.
 """
         
-        self._stream_thought("Consulting Gemini with Google Search grounding...")
+        self._stream_thought("🌐 Research Phase [3/5]: Researching methodology online with Google Search grounding...")
+        self._stream_thought("⏳ This may take 10-30 seconds as the model searches and synthesizes information...")
         
         try:
             client = genai.Client(api_key=self.api_key)
@@ -162,6 +165,7 @@ Format as structured JSON.
             research_result = response.text
             
             # Extract and stream grounding metadata (sources)
+            self._stream_thought("📎 Research Phase [4/5]: Extracting sources and citations...")
             sources = []
             search_queries = []
             
@@ -197,7 +201,7 @@ Format as structured JSON.
                 research_result += source_text
                 self._stream_thought(f"✅ Found {len(sources)} grounded sources")
             
-            self._stream_thought("Research complete!")
+            self._stream_thought("✅ Research Phase [5/5]: Complete! Methodology and sources ready.")
             
             # Store in shared memory
             shared_memory.set_research_context("latest_research", {

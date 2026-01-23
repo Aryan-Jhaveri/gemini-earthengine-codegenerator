@@ -69,6 +69,54 @@ const getAgentColor = (agent: string) => {
   }
 };
 
+// Preset examples for quick testing
+const PRESET_EXAMPLES = [
+  {
+    name: "Illegal Gold Mining Detection (Peru)",
+    data: {
+      objective: "Detect illegal gold mining activity in Madre de Dios region using vegetation loss and water turbidity analysis",
+      latitude: "-12.59",
+      longitude: "-69.19",
+      startDate: "2024-01-01",
+      endDate: "2025-12-01",
+      methodologyNotes: "Focus on deforestation and sediment load in rivers. Use NDVI change detection and water indices."
+    }
+  },
+  {
+    name: "Amazon Deforestation Monitoring (Brazil)",
+    data: {
+      objective: "Monitor deforestation rates in the Brazilian Amazon rainforest",
+      latitude: "-3.47",
+      longitude: "-62.21",
+      startDate: "2023-01-01",
+      endDate: "2024-12-01",
+      methodologyNotes: "Use Sentinel-2 for cloud-free composites. Compare NDVI and forest cover changes year-over-year."
+    }
+  },
+  {
+    name: "Urban Expansion Analysis (Dubai)",
+    data: {
+      objective: "Analyze urban growth and land use change in Dubai metropolitan area",
+      latitude: "25.20",
+      longitude: "55.27",
+      startDate: "2020-01-01",
+      endDate: "2024-12-01",
+      methodologyNotes: "Use built-up indices (NDBI) and land cover classification to track urban sprawl."
+    }
+  },
+  {
+    name: "Flood Detection (Pakistan)",
+    data: {
+      objective: "Detect and map flooding extent in Indus River basin during monsoon season",
+      latitude: "27.70",
+      longitude: "68.52",
+      startDate: "2024-07-01",
+      endDate: "2024-09-30",
+      methodologyNotes: "Use Sentinel-1 SAR for cloud-penetrating flood detection. Compare pre/post-flood water extent."
+    }
+  }
+];
+
 export default function Home() {
   const [formData, setFormData] = useState<FormData>({
     objective: "",
@@ -208,9 +256,17 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
     }
   };
 
-  const copyCode = () => {
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const copyCode = async () => {
     if (result?.code) {
-      navigator.clipboard.writeText(result.code);
+      try {
+        await navigator.clipboard.writeText(result.code);
+        setCopiedCode(true);
+        setTimeout(() => setCopiedCode(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
     }
   };
 
@@ -320,6 +376,24 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
               <p className="text-slate-500">
                 Define your research parameters and let the AI agents generate methodology and code
               </p>
+            </div>
+
+            {/* Preset Examples */}
+            <div className="mb-6">
+              <label className="text-sm font-medium text-slate-400 mb-2 block">Quick Examples</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {PRESET_EXAMPLES.map((example, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setFormData(example.data)}
+                    className="px-3 py-2 text-left bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 hover:border-cyan-600/50 rounded-lg text-sm text-slate-300 hover:text-cyan-300 transition-all"
+                  >
+                    <span className="font-medium block">{example.name}</span>
+                    <span className="text-xs text-slate-500">{example.data.objective.slice(0, 60)}...</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -645,17 +719,120 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
               )}
 
               {activeTab === "methodology" && (
-                <div className="p-6">
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <h2 className="text-xl font-semibold text-slate-200 mb-4 flex items-center gap-2">
-                      <span>📚</span> Research Methodology
-                    </h2>
-                    <div className="p-5 bg-slate-800/30 rounded-xl border border-slate-700/30">
-                      <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">
+                <div className="p-6 space-y-4">
+                  <h2 className="text-xl font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                    <span>📚</span> Research Methodology
+                  </h2>
+
+                  {/* Research Overview */}
+                  <details open className="bg-slate-800/50 rounded-xl border border-slate-700/30 overflow-hidden">
+                    <summary className="px-5 py-3 cursor-pointer hover:bg-slate-700/30 transition-colors font-medium text-slate-200 flex items-center gap-2">
+                      <span>📋</span> Overview
+                    </summary>
+                    <div className="px-5 py-4 border-t border-slate-700/30">
+                      <p className="text-slate-300 whitespace-pre-wrap leading-relaxed text-sm">
                         {result?.content || "No methodology available."}
                       </p>
                     </div>
-                  </div>
+                  </details>
+
+                  {/* Research Queries */}
+                  {(() => {
+                    const searchQueries = thoughts.filter(t => t.type === "search_query");
+                    if (searchQueries.length === 0) return null;
+                    return (
+                      <details className="bg-slate-800/50 rounded-xl border border-slate-700/30 overflow-hidden">
+                        <summary className="px-5 py-3 cursor-pointer hover:bg-slate-700/30 transition-colors font-medium text-slate-200 flex items-center gap-2">
+                          <span>🔍</span> Research Queries ({searchQueries.length})
+                        </summary>
+                        <div className="px-5 py-4 border-t border-slate-700/30 space-y-2">
+                          {searchQueries.map((q, i) => (
+                            <div key={i} className="flex items-start gap-2 p-2 bg-purple-900/20 rounded-lg border border-purple-700/30">
+                              <span className="text-purple-400 text-xs mt-0.5">🔍</span>
+                              <span className="text-sm text-slate-300">"{q.query || q.content.replace('🔍 Searched: "', '').replace('"', '')}"</span>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    );
+                  })()}
+
+                  {/* Sources */}
+                  {(() => {
+                    const sources = thoughts.filter(t => t.type === "source");
+                    if (sources.length === 0) return null;
+                    return (
+                      <details className="bg-slate-800/50 rounded-xl border border-slate-700/30 overflow-hidden">
+                        <summary className="px-5 py-3 cursor-pointer hover:bg-slate-700/30 transition-colors font-medium text-slate-200 flex items-center gap-2">
+                          <span>📎</span> Sources ({sources.length})
+                        </summary>
+                        <div className="px-5 py-4 border-t border-slate-700/30 space-y-2">
+                          {sources.map((s, i) => (
+                            <a
+                              key={i}
+                              href={s.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-start gap-2 p-3 bg-cyan-900/20 rounded-lg border border-cyan-700/30 hover:bg-cyan-900/30 transition-colors group"
+                            >
+                              <span className="text-cyan-400 text-xs mt-0.5">📎</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-cyan-300 group-hover:text-cyan-200 truncate">
+                                  {s.title || s.content}
+                                </p>
+                                <p className="text-xs text-slate-500 truncate mt-0.5">{s.uri}</p>
+                              </div>
+                              <span className="text-cyan-400 text-xs">↗</span>
+                            </a>
+                          ))}
+                        </div>
+                      </details>
+                    );
+                  })()}
+
+                  {/* Datasets */}
+                  {result?.datasets && result.datasets.length > 0 && (
+                    <details className="bg-slate-800/50 rounded-xl border border-slate-700/30 overflow-hidden">
+                      <summary className="px-5 py-3 cursor-pointer hover:bg-slate-700/30 transition-colors font-medium text-slate-200 flex items-center gap-2">
+                        <span>🛰️</span> Datasets Used ({result.datasets.length})
+                      </summary>
+                      <div className="px-5 py-4 border-t border-slate-700/30">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {result.datasets.map((ds, i) => (
+                            <div key={i} className="px-3 py-2 bg-slate-900/50 text-slate-300 rounded-lg border border-slate-700/30 text-sm font-mono">
+                              {ds}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </details>
+                  )}
+
+                  {/* Tools Used */}
+                  {(() => {
+                    const toolCalls = thoughts.filter(t => t.type === "tool_call");
+                    if (toolCalls.length === 0) return null;
+                    return (
+                      <details className="bg-slate-800/50 rounded-xl border border-slate-700/30 overflow-hidden">
+                        <summary className="px-5 py-3 cursor-pointer hover:bg-slate-700/30 transition-colors font-medium text-slate-200 flex items-center gap-2">
+                          <span>🔧</span> Tools Used ({toolCalls.length})
+                        </summary>
+                        <div className="px-5 py-4 border-t border-slate-700/30 space-y-2">
+                          {toolCalls.map((tc, i) => (
+                            <div key={i} className="flex items-start gap-2 p-2 bg-amber-900/20 rounded-lg border border-amber-700/30">
+                              <span className="text-amber-400 text-xs mt-0.5">🔧</span>
+                              <div className="flex-1">
+                                <p className="text-sm text-amber-300 font-medium">{tc.tool || "Unknown Tool"}</p>
+                                {tc.description && (
+                                  <p className="text-xs text-slate-400 mt-0.5">{tc.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -670,7 +847,17 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                         onClick={copyCode}
                         className="px-4 py-2 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors flex items-center gap-2"
                       >
-                        📋 Copy Code
+                        {copiedCode ? (
+                          <>
+                            <span>✅</span>
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>📋</span>
+                            <span>Copy Code</span>
+                          </>
+                        )}
                       </button>
                       <a
                         href="https://code.earthengine.google.com"
@@ -785,8 +972,8 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                           >
                             <div
                               className={`max-w-[80%] rounded-xl p-4 ${msg.role === "user"
-                                  ? "bg-gradient-to-br from-cyan-600 to-blue-600 text-white"
-                                  : "bg-slate-800/80 border border-slate-700/50"
+                                ? "bg-gradient-to-br from-cyan-600 to-blue-600 text-white"
+                                : "bg-slate-800/80 border border-slate-700/50"
                                 }`}
                             >
                               <div className="flex items-center gap-2 mb-2">
