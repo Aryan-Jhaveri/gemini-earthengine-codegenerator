@@ -17,10 +17,13 @@ class AgentType(str, Enum):
     CHAT = "chat"
     RESEARCHER = "researcher"
     CODER = "coder"
+    PLANNER = "planner"
+    SYNTHESIZER = "synthesizer"
 
 
 class MessageType(str, Enum):
     THOUGHT = "thought"
+    THINKING_STEP = "thinking_step"  # Numbered thinking steps from Gemini Thinking Mode
     RESEARCH = "research"
     CODE = "code"
     QUESTION = "question"
@@ -211,6 +214,27 @@ class SharedMemory:
             agent=agent,
             content=f"🔧 Calling: {tool_name}" + (f" - {description}" if description else ""),
             metadata={"tool": tool_name}
+        ))
+        
+        try:
+            self._stream_queue.put_nowait(data)
+        except asyncio.QueueFull:
+            pass
+    
+    def add_thinking_step(self, agent: AgentType, step_number: int, content: str) -> None:
+        """Stream a numbered thinking step (from Gemini Thinking Mode)."""
+        data = {
+            "type": "thinking_step",
+            "agent": agent.value,
+            "step": step_number,
+            "content": content,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        self.thoughts.append(Thought(
+            agent=agent,
+            content=f"💭 Step {step_number}: {content[:100]}..." if len(content) > 100 else f"💭 Step {step_number}: {content}",
+            metadata={"step": step_number, "full_content": content}
         ))
         
         try:

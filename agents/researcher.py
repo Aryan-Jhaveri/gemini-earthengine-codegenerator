@@ -8,7 +8,6 @@ Uses Gemini Deep Research + Google Search grounding to:
 4. Answer questions from Coder agent autonomously
 """
 
-import google.generativeai as genai_deprecated # Keep for legacy if needed, or remove
 from google import genai
 from google.genai import types
 from typing import Optional
@@ -135,48 +134,90 @@ Format as structured JSON.
 """
         
         self._stream_thought("🌐 Research Phase [3/5]: Researching methodology online with Google Search grounding...")
-        self._stream_thought("⏳ This may take 10-30 seconds as the model searches and synthesizes information...")
+        self._stream_thought("⏳ Streaming research with Thinking Mode enabled...")
         
         try:
             client = genai.Client(api_key=self.api_key)
             
-            if use_deep_research:
-                # Use Deep Research for comprehensive analysis
-                self._stream_thought("Using Deep Research mode (this may take a few minutes)...")
-                
-                # Note: 'google_search' tool in new SDK
-                response = await client.aio.models.generate_content(
-                    model=self.deep_research_model,
-                    contents=research_prompt,
-                    config=types.GenerateContentConfig(
-                        tools=[types.Tool(google_search=types.GoogleSearch())],
-                    )
+            # Config with Google Search grounding + Thinking Mode
+            config = types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                thinking_config=types.ThinkingConfig(
+                    include_thoughts=True,
+                    thinking_budget=2048
                 )
-            else:
-                # Use quick model with search grounding
-                response = await client.aio.models.generate_content(
-                    model=self.quick_model,
-                    contents=research_prompt,
-                    config=types.GenerateContentConfig(
-                        tools=[types.Tool(google_search=types.GoogleSearch())],
-                    )
-                )
+            )
             
-            research_result = response.text
+            model_to_use = self.deep_research_model if use_deep_research else self.quick_model
+            
+            if use_deep_research:
+                self._stream_thought("Using Deep Research mode (this may take a few minutes)...")
+            
+            self._stream_thought("💭 Thinking Process Started...")
+            
+            # Use sync streaming wrapped in thread to not block event loop
+            import asyncio
+            
+            def run_streaming():
+                """Run sync streaming in a thread."""
+                research_result = ""
+                thought_count = 0
+                full_response = None
+                
+                response_stream = client.models.generate_content_stream(
+                    model=model_to_use,
+                    contents=research_prompt,
+                    config=config
+                )
+                
+                for chunk in response_stream:
+                    full_response = chunk
+                    
+                    if hasattr(chunk, 'candidates') and chunk.candidates:
+                        for candidate in chunk.candidates:
+                            if hasattr(candidate, 'content') and candidate.content:
+                                for part in candidate.content.parts:
+                                    if hasattr(part, 'thought') and part.thought:
+                                        thought_count += 1
+                                        thought_preview = part.text[:200] + "..." if len(part.text) > 200 else part.text
+                                        self._stream_thought(f"💭 [{thought_count}] {thought_preview}")
+                                    elif hasattr(part, 'text') and part.text:
+                                        research_result += part.text
+                    elif chunk.text:
+                        research_result += chunk.text
+                
+                return research_result, thought_count, full_response
+            
+            # Run in thread to avoid blocking event loop
+            research_result, thought_count, full_response = await asyncio.to_thread(run_streaming)
+            
+            if thought_count > 0:
+                self._stream_thought(f"✅ Completed {thought_count} thinking steps")
+            
+            # Token counting
+            try:
+                count_resp = client.models.count_tokens(
+                    model=model_to_use,
+                    contents=research_prompt
+                )
+                self._stream_thought(f"📊 Token Analysis - Input Token Count: {count_resp.total_tokens}")
+            except Exception as tok_err:
+                print(f"Token count error: {tok_err}")
             
             # Extract and stream grounding metadata (sources)
             self._stream_thought("📎 Research Phase [4/5]: Extracting sources and citations...")
             sources = []
             search_queries = []
             
-            if response.candidates and response.candidates[0].grounding_metadata:
-                gm = response.candidates[0].grounding_metadata
+            # Try to get grounding metadata from the final response
+            if full_response and full_response.candidates and full_response.candidates[0].grounding_metadata:
+                gm = full_response.candidates[0].grounding_metadata
                 
                 # Stream search queries that were used
                 if hasattr(gm, 'web_search_queries') and gm.web_search_queries:
-                    for query in gm.web_search_queries:
-                        search_queries.append(query)
-                        shared_memory.add_search_query(AgentType.RESEARCHER, query)
+                    for q in gm.web_search_queries:
+                        search_queries.append(q)
+                        shared_memory.add_search_query(AgentType.RESEARCHER, q)
                 
                 # Stream grounding sources with URLs
                 if gm.grounding_chunks:

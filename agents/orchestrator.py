@@ -12,6 +12,8 @@ from .memory import shared_memory, AgentType, MessageType
 from .chat_agent import chat_agent
 from .researcher import researcher_agent
 from .coder import coder_agent
+from .planner import planner_agent
+from .synthesizer import synthesizer_agent
 
 
 class AgentOrchestrator:
@@ -28,6 +30,8 @@ class AgentOrchestrator:
         self.chat = chat_agent
         self.researcher = researcher_agent
         self.coder = coder_agent
+        self.planner = planner_agent
+        self.synthesizer = synthesizer_agent
         self._running = False
     
     async def process_user_message(self, message: str) -> dict:
@@ -72,16 +76,19 @@ class AgentOrchestrator:
     
     async def run_full_analysis(self, query: str, use_deep_research: bool = False) -> dict:
         """
-        Run a complete analysis pipeline.
+        Run a complete analysis pipeline with all agents.
         
         Args:
             query: Analysis query
             use_deep_research: Whether to use Deep Research mode
         
         Returns:
-            Complete analysis results
+            Complete analysis results including methodology report
         """
-        # Step 1: Research
+        # Step 0: Plan the mission (decompose into tasks)
+        tasks = await self.planner.plan(query)
+        
+        # Step 1: Research methodology and datasets
         research_result = await self.researcher.research(query, use_deep_research)
         
         # Resolve any questions from research phase
@@ -93,9 +100,14 @@ class AgentOrchestrator:
         # Resolve any questions from coding phase
         await self._resolve_pending_questions()
         
+        # Step 3: Synthesize methodology report with citations
+        methodology = await self.synthesizer.synthesize(research_result, code_result)
+        
         return {
+            "tasks": tasks,
             "research": research_result,
             "code": code_result,
+            "methodology": methodology,
             "context": shared_memory.get_full_context()
         }
 

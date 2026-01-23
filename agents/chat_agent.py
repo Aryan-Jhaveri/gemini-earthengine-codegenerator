@@ -7,7 +7,6 @@ Refines scripts when user asks.
 Answers questions using stored context.
 """
 
-import google.generativeai as genai_deprecated # Keep for legacy
 from google import genai
 from google.genai import types
 from typing import Optional
@@ -135,27 +134,27 @@ For questions about existing work, use the stored context."""
             return await self._handle_general(message)
     
     async def _handle_new_analysis(self, message: str) -> dict:
-        """Delegate to Researcher and Coder for new analysis."""
+        """Delegate to full agent pipeline for new analysis."""
         self._stream_thought("This is a new analysis request, delegating to agents...")
         
-        # Import agents
-        from .researcher import researcher_agent
-        from .coder import coder_agent
+        # Import orchestrator for full 4-agent pipeline
+        from .orchestrator import orchestrator
         
-        # Step 1: Research
-        self._stream_thought("Asking Researcher to gather context...")
-        research_result = await researcher_agent.research(message)
+        # Run full analysis: Planner → Researcher → Coder → Synthesizer
+        self._stream_thought("Running full analysis pipeline with all agents...")
+        full_result = await orchestrator.run_full_analysis(message)
         
-        # Step 2: Generate code
-        self._stream_thought("Asking Coder to generate script...")
-        code_result = await coder_agent.generate_script(message, research_result)
+        research_result = full_result.get("research", {})
+        code_result = full_result.get("code", {})
+        methodology = full_result.get("methodology", {})
         
         if "error" in code_result:
             response_text = f"I encountered an error: {code_result['error']}"
             return {"type": "error", "content": response_text}
         
-        # Build response: Include the full research methodology so frontend can display it
-        research_text = research_result.get("research", "No methodology available.")
+        # Use synthesized methodology if available, otherwise fall back to raw research
+        methodology_text = methodology.get("methodology") if methodology else None
+        research_text = methodology_text or research_result.get("research", "No methodology available.")
         
         response_text = f"""{research_text}
         
@@ -174,7 +173,8 @@ You can copy the script from the 'Generated Code' tab and paste it into the [Ear
             "type": "analysis_complete",
             "content": response_text,
             "code": code_result["code"],
-            "datasets": code_result.get("datasets_used", [])
+            "datasets": code_result.get("datasets_used", []),
+            "methodology": methodology
         }
     
     async def _handle_refinement(self, message: str) -> dict:

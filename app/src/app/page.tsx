@@ -9,7 +9,7 @@ interface AnalysisResult {
 }
 
 interface Thought {
-  type?: string;  // thought, source, search_query, tool_call
+  type?: string;  // thought, source, search_query, tool_call, thinking_step
   agent: string;
   content: string;
   timestamp: string;
@@ -21,6 +21,8 @@ interface Thought {
   // For tool_call events
   tool?: string;
   description?: string;
+  // For thinking_step events
+  step?: number;
 }
 
 interface FormData {
@@ -51,6 +53,10 @@ const getAgentIcon = (agent: string) => {
       return "💻";
     case "chat":
       return "💬";
+    case "planner":
+      return "📋";
+    case "synthesizer":
+      return "📝";
     default:
       return "🤖";
   }
@@ -64,6 +70,10 @@ const getAgentColor = (agent: string) => {
       return "text-emerald-400";
     case "chat":
       return "text-blue-400";
+    case "planner":
+      return "text-orange-400";
+    case "synthesizer":
+      return "text-pink-400";
     default:
       return "text-gray-400";
   }
@@ -563,7 +573,9 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                           ? "bg-amber-900/20 border-amber-700/40"
                           : thought.type === "search_query"
                             ? "bg-purple-900/20 border-purple-700/40"
-                            : "bg-slate-800/50 border-slate-700/30"
+                            : thought.type === "thinking_step"
+                              ? "bg-blue-900/20 border-blue-700/40"
+                              : "bg-slate-800/50 border-slate-700/30"
                         }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
@@ -577,9 +589,10 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                           <span className={`text-xs px-2 py-0.5 rounded-full ${thought.type === "source" ? "bg-cyan-800/50 text-cyan-300"
                             : thought.type === "tool_call" ? "bg-amber-800/50 text-amber-300"
                               : thought.type === "search_query" ? "bg-purple-800/50 text-purple-300"
-                                : "bg-slate-700/50 text-slate-300"
+                                : thought.type === "thinking_step" ? "bg-blue-800/50 text-blue-300"
+                                  : "bg-slate-700/50 text-slate-300"
                             }`}>
-                            {thought.type}
+                            {thought.type === "thinking_step" ? `step ${thought.step || ""}` : thought.type}
                           </span>
                         )}
                         <span className="text-xs text-slate-600">
@@ -596,7 +609,7 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                           {thought.content} ↗
                         </a>
                       ) : (
-                        <p className="text-sm text-slate-300 leading-relaxed">
+                        <p className="text-sm text-slate-300 leading-relaxed break-words whitespace-pre-wrap">
                           {thought.content}
                         </p>
                       )}
@@ -929,7 +942,7 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
                               {thought.content} ↗
                             </a>
                           ) : (
-                            <p className="text-sm text-slate-300">{thought.content}</p>
+                            <p className="text-sm text-slate-300 break-words whitespace-pre-wrap leading-relaxed">{thought.content}</p>
                           )}
                         </div>
                       ))
