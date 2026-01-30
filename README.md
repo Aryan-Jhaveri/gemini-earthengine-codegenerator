@@ -1,4 +1,4 @@
-# Multiagent Gemini Google Earth Engine Code Generator 🛰️
+# MCGEE - Multiagent Code-generator for Google Earth Engine 🛰️
 
 **Turn plain English into Earth Engine code using AI agents.**
 
