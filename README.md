@@ -1,4 +1,4 @@
-# Google Earth Engine AI Generator 🛰️
+# Multiagent Gemini Google Earth Engine Code Generator 🛰️
 
 **Turn plain English into Earth Engine code using AI agents.**
 
