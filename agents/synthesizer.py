@@ -165,8 +165,7 @@ Use clear, professional language with proper inline citations throughout.
                                 for part in candidate.content.parts:
                                     if hasattr(part, 'thought') and part.thought:
                                         thought_count += 1
-                                        thought_preview = part.text[:150] + "..." if len(part.text) > 150 else part.text
-                                        self._stream_thought(f"💭 [{thought_count}] {thought_preview}")
+                                        self._stream_thought(f"💭 [{thought_count}] {part.text}")
                                     elif hasattr(part, 'text') and part.text:
                                         methodology += part.text
                     elif chunk.text:
