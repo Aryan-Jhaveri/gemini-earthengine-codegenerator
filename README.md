@@ -1,67 +1,162 @@
-# Orbital Insight - Multi-Agent Geointelligence
+# Orbital Insight 🛰️
 
-A multi-agent system for geospatial analysis using Google Earth Engine, powered by Gemini AI.
+**Turn plain English into Earth Engine code using AI agents.**
 
-## Features
+Ask questions like "Show me deforestation in the Amazon" and get ready-to-use satellite analysis scripts.
 
-- 🔬 **Researcher Agent**: Deep Research + Google Search grounding for methodology discovery
-- 💻 **Coder Agent**: Gemini Thinking Mode for step-by-step script generation
-- 💬 **Chat Agent**: Natural language interface with full context access
-- 🧠 **Real-time Thinking Logs**: Watch agents reason in real-time via WebSocket
-- 🌍 **Earth Engine Integration**: Query datasets, verify schemas, generate copy-paste scripts
+---
+
+## What It Does
+
+```mermaid
+graph LR
+    A[You Ask a Question] --> B[4 AI Agents Work Together]
+    B --> C[Get Earth Engine Code]
+    C --> D[Paste & Run in Code Editor]
+    
+    style A fill:#3b82f6
+    style B fill:#8b5cf6
+    style C fill:#10b981
+    style D fill:#f59e0b
+```
+
+**The agents:**
+- � **Planner** - Breaks your question into steps
+- 🔬 **Researcher** - Finds the best satellites and methods
+- 💻 **Coder** - Writes the Earth Engine script
+- 📝 **Synthesizer** - Explains what it did
+
+You can watch them think in real-time!
+
+---
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Get Your API Key
+You need a [Google AI API key](https://aistudio.google.com/app/apikey) (free).
+
+### 2. Setup
 
 ```bash
-# Backend (Python)
+# Copy the example file
+cp .env.example .env
+
+# Add your API key to .env
+GOOGLE_API_KEY=your-key-here
+```
+
+### 3. Install
+
+```bash
+# Python packages
 pip install -r requirements.txt
 
-# Frontend (Next.js)
-cd app
-npm install
+# Frontend packages
+cd app && npm install
 ```
 
-### 2. Set Environment Variables
-
-Create a `.env` file:
-```
-GOOGLE_API_KEY=your-gemini-api-key
-GOOGLE_CLOUD_PROJECT=your-gcp-project
-```
-
-### 3. Run
+### 4. Run
 
 ```bash
-# Start both services
-chmod +x start.sh
 ./start.sh
-
-# Or run separately:
-# Backend
-python -m uvicorn api.main:app --reload --port 8000
-
-# Frontend
-cd app && npm run dev
 ```
 
-### 4. Open
+Open http://localhost:3000
 
-- **Frontend**: http://localhost:3000
-- **API Docs**: http://localhost:8000/docs
+---
 
-## Architecture
+## How It Works
+
+```mermaid
+graph TB
+    User[🧑 You Type a Question] --> Chat[💬 Chat Agent]
+    
+    Chat --> Orch[🎯 Orchestrator]
+    
+    Orch --> Plan[📋 Planner<br/>Breaks into tasks]
+    Orch --> Research[🔬 Researcher<br/>Finds data & methods]
+    Orch --> Code[💻 Coder<br/>Writes the script]
+    Orch --> Synth[📝 Synthesizer<br/>Explains the approach]
+    
+    Plan -.->|thoughts| WS[📡 WebSocket]
+    Research -.->|thoughts| WS
+    Code -.->|thoughts| WS
+    Synth -.->|thoughts| WS
+    
+    WS --> UI[🖥️ Your Browser]
+    
+    Code --> Result[✅ Earth Engine Script]
+    
+    style User fill:#3b82f6,color:#fff
+    style Result fill:#10b981,color:#fff
+    style WS fill:#8b5cf6,color:#fff
+```
+
+All agents stream their thoughts live so you can see the reasoning.
+
+---
+
+## Example Questions
+
+Try these:
+
+- "Analyze Amazon deforestation from 2020-2023"
+- "Show California wildfire burn scars"
+- "Detect floods in Bangladesh using radar"
+- "Track urban growth in Tokyo"
+- "Calculate NDVI for farms in Iowa"
+
+---
+
+## Tech Stack
+
+| Part | Tech |
+|------|------|
+| **Agents** | Google Gemini 3 Pro |
+| **Backend** | Python + FastAPI |
+| **Frontend** | Next.js + TypeScript |
+| **Streaming** | WebSocket |
+| **Target** | Google Earth Engine |
+
+---
+
+## Project Structure
 
 ```
-User → Chat Agent → [Researcher Agent ↔ Coder Agent] → Generated Script
-                  ↓
-           Shared Memory (all thoughts streamed via WebSocket)
+orbital-insight/
+├── agents/          # The 4 AI agents
+├── api/             # FastAPI backend
+├── app/             # Next.js frontend
+└── start.sh         # Run everything
 ```
 
-## Example Queries
+---
 
-- "Analyze deforestation in Amazon for 2024"
-- "Show NDVI changes for California wildfires"
-- "Detect floods using Sentinel-1 SAR data"
-- "Create a land cover classification for Kenya"
+## Watch the Agents Think
+
+Every agent streams its thoughts in real-time:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Planner
+    participant Researcher
+    participant Coder
+    participant UI
+    
+    User->>Planner: "Detect deforestation"
+    Planner->>UI: 💭 Breaking into steps...
+    Planner->>Researcher: Research task
+    Researcher->>UI: 💭 Searching for Landsat data...
+    Researcher->>UI: 🔗 Found 3 sources
+    Researcher->>Coder: Here's what to use
+    Coder->>UI: 💭 Writing script...
+    Coder->>UI: 💭 Adding visualization...
+    Coder->>User: ✅ Ready to use!
+```
+
+---
+
+## License
+
+MIT
