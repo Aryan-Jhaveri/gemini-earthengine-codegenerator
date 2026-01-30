@@ -132,30 +132,6 @@ orbital-insight/
 
 ---
 
-## Watch the Agents Think
-
-Every agent streams its thoughts in real-time:
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Planner
-    participant Researcher
-    participant Coder
-    participant UI
-    
-    User->>Planner: "Detect deforestation"
-    Planner->>UI: 💭 Breaking into steps...
-    Planner->>Researcher: Research task
-    Researcher->>UI: 💭 Searching for Landsat data...
-    Researcher->>UI: 🔗 Found 3 sources
-    Researcher->>Coder: Here's what to use
-    Coder->>UI: 💭 Writing script...
-    Coder->>UI: 💭 Adding visualization...
-    Coder->>User: ✅ Ready to use!
-```
-
----
 
 ## License
 
