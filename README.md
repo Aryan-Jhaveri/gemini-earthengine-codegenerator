@@ -1,4 +1,4 @@
-# Orbital Insight 🛰️
+# Google Earth Engine AI Generator 🛰️
 
 **Turn plain English into Earth Engine code using AI agents.**
 
