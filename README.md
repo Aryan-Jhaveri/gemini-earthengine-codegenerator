@@ -1,8 +1,8 @@
 # MCGEE - Multiagent Code-generator for Google Earth Engine 🛰️
 
-**Turn plain English into Earth Engine code using AI agents.**
+A multi-agent LLM APP that generates Google Earth Engine code for given a research objective, date/time, lat/long, and any specific methodology. Strictly uses Gemini 3 Pro, made for GEMINI 3 Hackathon.
 
-Ask questions like "Show me deforestation in the Amazon" and get ready-to-use satellite analysis scripts.
+MCGEE is a MVP project who's objective is to leverage deep research and code writing capabilities to make remote sensing code generation accessible to everyone.
 
 ---
 
