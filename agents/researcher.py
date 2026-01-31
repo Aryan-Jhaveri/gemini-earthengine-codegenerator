@@ -58,11 +58,7 @@ Always provide structured output with:
 - Required bands and their names
 - Preprocessing steps
 - Analysis methodology
-- Output format requirements
-
-CRITICAL INSTRUCTION: You MUST use Google Search grounding to find real-world documentation and citations. 
-Do NOT rely solely on your internal training. 
-If tools like `google_search` or `url_context` are available, USE THEM to potentialize your answer with real URLs."""
+- Output format requirements"""
 
     def _stream_thought(self, content: str) -> None:
         """Stream a thought to shared memory."""
@@ -122,36 +118,38 @@ Band Schemas:
 {ee_data['schemas']}
 """
         
-        # Research prompt
+        # Research prompt - explicitly require web search and citations
         research_prompt = f"""
 Research Task: {query}
 
 {tool_context}
 
+IMPORTANT INSTRUCTIONS:
+1. You MUST use Google Search to find relevant scientific papers, documentation, and methodologies
+2. You MUST cite external sources with URLs in your response
+3. Do NOT rely solely on your training data - search for current information
+4. Include at least 3-5 external web sources with full URLs
+
 Provide a comprehensive research report including:
-1. Recommended methodology
-2. Best datasets to use (with exact Earth Engine IDs)
-3. Required preprocessing steps
+1. Recommended methodology (cite academic papers or official documentation)
+2. Best datasets to use (with exact Earth Engine IDs and documentation URLs)
+3. Required preprocessing steps (cite source)
 4. Band names to use for analysis
 5. Any important considerations
 
-Format as structured JSON.
+Include a SOURCES section at the end with numbered citations [1], [2], etc. with full URLs.
+Format as structured JSON with a "sources" array containing title and URL for each source.
 """
         
-        self._stream_thought("🌐 Research Phase [3/5]: Researching methodology online with FORCED Google Search grounding...")
+        self._stream_thought("🌐 Research Phase [3/5]: Researching methodology with Google Search grounding...")
         self._stream_thought("⏳ Streaming research with Thinking Mode enabled...")
         
         try:
             client = genai.Client(api_key=self.api_key)
             
             # Build grounding tools list
-            # NOTE: Reverted to standard GoogleSearch() because DynamicRetrievalConfig 
-            # is currently blocked by SDK/API conflicts (see claude.md).
-            grounding_tools = [
-                types.Tool(
-                    google_search=types.GoogleSearch()
-                )
-            ]
+            # Note: API only supports basic GoogleSearch, not GoogleSearchRetrieval with DynamicRetrievalConfig
+            grounding_tools = [types.Tool(google_search=types.GoogleSearch())]
             
             # Add URL context if URLs provided (for reading specific documentation)
             if context_urls and len(context_urls) > 0:
@@ -162,7 +160,7 @@ Format as structured JSON.
                     )
                 )
             
-            # Config with FORCED Google Search grounding + Thinking Mode
+            # Config with Google Search grounding + Thinking Mode
             config = types.GenerateContentConfig(
                 tools=grounding_tools,
                 thinking_config=types.ThinkingConfig(
