@@ -49,7 +49,8 @@ Use academic writing style with clear sections and proper citations."""
     async def synthesize(
         self, 
         research_context: Dict[str, Any], 
-        code_context: Optional[Dict[str, Any]] = None
+        code_context: Optional[Dict[str, Any]] = None,
+        sources: list = None
     ) -> Dict[str, Any]:
         """
         Create methodology report with inline citations.
@@ -57,6 +58,7 @@ Use academic writing style with clear sections and proper citations."""
         Args:
             research_context: Research findings including sources and queries
             code_context: Optional generated code context
+            sources: Optional explicitly passed sources from orchestrator (validated)
         
         Returns:
             Dict with methodology report and metadata
@@ -64,21 +66,23 @@ Use academic writing style with clear sections and proper citations."""
         self._stream_thought("📝 Synthesizing methodology report with citations...")
         
         # Extract components from research context
-        sources = research_context.get("sources", [])
+        # Prefer explicitly passed sources (validated by orchestrator)
+        validated_sources = sources if sources else research_context.get("sources", [])
         search_queries = research_context.get("search_queries", [])
         research_text = research_context.get("research", "")
         datasets = research_context.get("datasets", [])
         
         # Format sources for citation reference
-        if sources:
+        if validated_sources and len(validated_sources) > 0:
             source_list = "\n".join([
                 f"[{i+1}] {s.get('title', 'Unknown Source')}: {s.get('uri', '')}"
-                for i, s in enumerate(sources)
+                for i, s in enumerate(validated_sources)
             ])
-            self._stream_thought(f"📚 Including {len(sources)} sources for citation")
+            self._stream_thought(f"📚 Including {len(validated_sources)} validated sources for citation")
         else:
-            source_list = "No external sources available"
-            self._stream_thought("⚠️ No sources available for citation")
+            source_list = "⚠️ NO EXTERNAL SOURCES AVAILABLE - Do not include a References section or create fake citations"
+            self._stream_thought("⚠️ No validated sources available - citations will be omitted")
+            self._stream_thought("📢 Report will note that no external sources were retrieved by web grounding")
         
         # Build comprehensive prompt
         prompt = f"""
@@ -196,17 +200,17 @@ Use clear, professional language with proper inline citations throughout.
             # Store in research context
             shared_memory.set_research_context("methodology_report", {
                 "report": methodology,
-                "sources": sources,
+                "sources": validated_sources,
                 "search_queries": search_queries,
                 "datasets": datasets
             })
             
             return {
                 "methodology": methodology,
-                "sources": sources,
+                "sources": validated_sources,
                 "search_queries": search_queries,
                 "datasets": datasets,
-                "citation_count": len(sources)
+                "citation_count": len(validated_sources)
             }
             
         except Exception as e:
@@ -214,7 +218,7 @@ Use clear, professional language with proper inline citations throughout.
             self._stream_thought(error_msg)
             return {
                 "methodology": f"Error generating report: {error_msg}",
-                "sources": sources,
+                "sources": validated_sources if 'validated_sources' in dir() else [],
                 "error": error_msg
             }
 

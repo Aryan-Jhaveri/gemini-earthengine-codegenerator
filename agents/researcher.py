@@ -89,13 +89,14 @@ Always provide structured output with:
         
         return results
     
-    async def research(self, query: str, use_deep_research: bool = False) -> dict:
+    async def research(self, query: str, use_deep_research: bool = False, context_urls: list = None) -> dict:
         """
         Conduct research on a geospatial analysis topic.
         
         Args:
             query: The research query
             use_deep_research: If True, use Deep Research (slower but comprehensive)
+            context_urls: Optional list of URLs to read as context (max 20)
         
         Returns:
             Research results dict
@@ -133,15 +134,37 @@ Provide a comprehensive research report including:
 Format as structured JSON.
 """
         
-        self._stream_thought("🌐 Research Phase [3/5]: Researching methodology online with Google Search grounding...")
+        self._stream_thought("🌐 Research Phase [3/5]: Researching methodology online with FORCED Google Search grounding...")
         self._stream_thought("⏳ Streaming research with Thinking Mode enabled...")
         
         try:
             client = genai.Client(api_key=self.api_key)
             
-            # Config with Google Search grounding + Thinking Mode
+            # Build grounding tools list - FORCE web search with DynamicRetrievalConfig
+            grounding_tools = [
+                types.Tool(
+                    google_search=types.GoogleSearch(
+                        dynamic_retrieval_config=types.DynamicRetrievalConfig(
+                            # MODE_UNSPECIFIED = ALWAYS retrieve from web
+                            mode=types.DynamicRetrievalConfigMode.MODE_UNSPECIFIED,
+                            dynamic_threshold=0.0  # Threshold of 0 = always ground
+                        )
+                    )
+                )
+            ]
+            
+            # Add URL context if URLs provided (for reading specific documentation)
+            if context_urls and len(context_urls) > 0:
+                self._stream_thought(f"📄 Adding {len(context_urls)} URLs for context grounding...")
+                grounding_tools.append(
+                    types.Tool(
+                        url_context=types.UrlContext(urls=context_urls[:20])  # Max 20 URLs
+                    )
+                )
+            
+            # Config with FORCED Google Search grounding + Thinking Mode
             config = types.GenerateContentConfig(
-                tools=[types.Tool(google_search=types.GoogleSearch())],
+                tools=grounding_tools,
                 thinking_config=types.ThinkingConfig(
                     include_thoughts=True,
                     thinking_budget=2048
@@ -240,6 +263,21 @@ Format as structured JSON.
                 ])
                 research_result += source_text
                 self._stream_thought(f"✅ Found {len(sources)} grounded sources")
+            else:
+                # CRITICAL: No sources found - grounding may have failed
+                self._stream_thought("⚠️ WARNING: No grounded web sources found!")
+                self._stream_thought("📢 Grounding may have been skipped - research may rely on model knowledge")
+                # Add warning to shared memory for downstream agents
+                shared_memory.add_thought(
+                    AgentType.RESEARCHER, 
+                    "⚠️ NO EXTERNAL SOURCES AVAILABLE - Synthesizer should note that citations cannot be verified",
+                    metadata={"warning": "no_grounding_sources"}
+                )
+            
+            if search_queries:
+                self._stream_thought(f"🔍 Used {len(search_queries)} search queries: {search_queries[:3]}...")
+            else:
+                self._stream_thought("⚠️ No search queries executed by grounding")
             
             self._stream_thought("✅ Research Phase [5/5]: Complete! Methodology and sources ready.")
             

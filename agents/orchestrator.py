@@ -74,13 +74,14 @@ class AgentOrchestrator:
             
             await asyncio.sleep(0.1)  # Brief pause between rounds
     
-    async def run_full_analysis(self, query: str, use_deep_research: bool = False) -> dict:
+    async def run_full_analysis(self, query: str, use_deep_research: bool = False, context_urls: list = None) -> dict:
         """
         Run a complete analysis pipeline with all agents.
         
         Args:
             query: Analysis query
             use_deep_research: Whether to use Deep Research mode
+            context_urls: Optional list of URLs to read as research context
         
         Returns:
             Complete analysis results including methodology report
@@ -88,26 +89,42 @@ class AgentOrchestrator:
         # Step 0: Plan the mission (decompose into tasks)
         tasks = await self.planner.plan(query)
         
-        # Step 1: Research methodology and datasets
-        research_result = await self.researcher.research(query, use_deep_research)
+        # Step 1: Research methodology and datasets (with optional URL context)
+        research_result = await self.researcher.research(
+            query, 
+            use_deep_research,
+            context_urls=context_urls
+        )
+        
+        # Get accumulated research context for downstream agents
+        research_summary = shared_memory.get_research_summary()
         
         # Resolve any questions from research phase
         await self._resolve_pending_questions()
         
-        # Step 2: Generate code
-        code_result = await self.coder.generate_script(query, research_result)
+        # Step 2: Generate code (with full research context passed explicitly)
+        code_result = await self.coder.generate_script(
+            query, 
+            research_result
+        )
         
         # Resolve any questions from coding phase
         await self._resolve_pending_questions()
         
-        # Step 3: Synthesize methodology report with citations
-        methodology = await self.synthesizer.synthesize(research_result, code_result)
+        # Step 3: Synthesize methodology report with validated sources
+        methodology = await self.synthesizer.synthesize(
+            research_result, 
+            code_result,
+            sources=research_summary.get("sources", [])
+        )
         
         return {
             "tasks": tasks,
             "research": research_result,
             "code": code_result,
             "methodology": methodology,
+            "sources": research_summary.get("sources", []),
+            "search_queries": research_summary.get("search_queries", []),
             "context": shared_memory.get_full_context()
         }
 

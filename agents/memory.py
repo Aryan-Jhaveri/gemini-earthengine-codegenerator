@@ -315,6 +315,41 @@ class SharedMemory:
         """Get the most recent generated script."""
         return self.code_outputs[-1] if self.code_outputs else None
     
+    def get_accumulated_sources(self) -> list[dict]:
+        """
+        Get all grounding sources collected during this session.
+        Used by downstream agents (Coder, Synthesizer) to access research sources.
+        """
+        sources = []
+        for thought in self.thoughts:
+            if "uri" in thought.metadata:
+                sources.append({
+                    "title": thought.metadata.get("title", ""),
+                    "uri": thought.metadata["uri"],
+                    "agent": thought.agent.value
+                })
+        return sources
+    
+    def get_accumulated_search_queries(self) -> list[str]:
+        """Get all search queries used during this session."""
+        queries = []
+        for thought in self.thoughts:
+            if "query" in thought.metadata:
+                queries.append(thought.metadata["query"])
+        return queries
+    
+    def get_research_summary(self) -> dict:
+        """
+        Get a summary of research context for downstream agents.
+        Includes sources, queries, and full research context.
+        """
+        return {
+            "sources": self.get_accumulated_sources(),
+            "search_queries": self.get_accumulated_search_queries(),
+            "research_context": self.research_context,
+            "latest_research": self.research_context.get("latest_research", {}).get("value", {})
+        }
+    
     def on_thought(self, callback: Callable[[Thought], None]) -> None:
         """Register callback for real-time thought streaming."""
         self._thought_callbacks.append(callback)

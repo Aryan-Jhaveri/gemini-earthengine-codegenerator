@@ -59,6 +59,7 @@ class ChatResponse(BaseModel):
 class AnalysisRequest(BaseModel):
     query: str
     use_deep_research: Optional[bool] = False
+    context_urls: Optional[list[str]] = []  # Optional URLs for URL context grounding
 
 
 # WebSocket connections
@@ -93,11 +94,17 @@ async def chat(request: ChatRequest):
 async def analyze(request: AnalysisRequest):
     """
     Run a full analysis pipeline.
+    
+    Args (JSON body):
+        query: The analysis query
+        use_deep_research: Optional boolean for deep research mode
+        context_urls: Optional list of URLs to read as context for grounding
     """
     try:
         result = await orchestrator.run_full_analysis(
             request.query,
-            request.use_deep_research
+            request.use_deep_research,
+            context_urls=request.context_urls
         )
         return result
     except Exception as e:
