@@ -8,9 +8,21 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
+.beads/
+.agent/
+.gitignore
 
+.gitattributes
 # OS
 .DS_Store
 
 # AI/Assistant notes
 claude.md
+
+./beads
+./agent
+.gitignore
+.gitattributes
+
+check_models.py
+debug_setup.py

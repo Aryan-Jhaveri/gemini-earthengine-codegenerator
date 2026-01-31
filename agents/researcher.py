@@ -58,7 +58,11 @@ Always provide structured output with:
 - Required bands and their names
 - Preprocessing steps
 - Analysis methodology
-- Output format requirements"""
+- Output format requirements
+
+CRITICAL INSTRUCTION: You MUST use Google Search grounding to find real-world documentation and citations. 
+Do NOT rely solely on your internal training. 
+If tools like `google_search` or `url_context` are available, USE THEM to potentialize your answer with real URLs."""
 
     def _stream_thought(self, content: str) -> None:
         """Stream a thought to shared memory."""
@@ -140,16 +144,12 @@ Format as structured JSON.
         try:
             client = genai.Client(api_key=self.api_key)
             
-            # Build grounding tools list - FORCE web search with DynamicRetrievalConfig
+            # Build grounding tools list
+            # NOTE: Reverted to standard GoogleSearch() because DynamicRetrievalConfig 
+            # is currently blocked by SDK/API conflicts (see claude.md).
             grounding_tools = [
                 types.Tool(
-                    google_search=types.GoogleSearch(
-                        dynamic_retrieval_config=types.DynamicRetrievalConfig(
-                            # MODE_UNSPECIFIED = ALWAYS retrieve from web
-                            mode=types.DynamicRetrievalConfigMode.MODE_UNSPECIFIED,
-                            dynamic_threshold=0.0  # Threshold of 0 = always ground
-                        )
-                    )
+                    google_search=types.GoogleSearch()
                 )
             ]
             
