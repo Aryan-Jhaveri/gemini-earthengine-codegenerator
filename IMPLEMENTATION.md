@@ -37,51 +37,6 @@ A working multi-agent system that generates Earth Engine JavaScript code from na
 
 ---
 
-## 🚀 Next Steps
-
-### Phase 1: URL Context for Coder Agent
-Give the Coder agent direct access to EE documentation via `url_context`:
-
-```python
-# Proposed implementation
-config = types.GenerateContentConfig(
-    tools=[
-        types.Tool(
-            url_context=types.UrlContext(
-                urls=[
-                    "https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED",
-                    "https://developers.google.com/earth-engine/guides/image_visualization",
-                ]
-            )
-        )
-    ]
-)
-```
-
-**Priority URLs**:
-1. Dataset catalog pages (contain working code examples)
-2. Guides: `image_visualization`, `ic_filtering`, `ic_reducing`
-3. GitHub raw examples: `earthengine-api/javascript/src/examples/`
-
-### Phase 2: Smart URL Selection
-Build a function that selects relevant URLs based on task keywords:
-
-```python
-def get_example_urls(task: str, dataset_ids: list[str]) -> list[str]:
-    # 1. Always include dataset catalog pages
-    # 2. Add keyword-matched guides (ndvi → normalized_difference)
-    # 3. Add GitHub examples for specific operations
-    return urls[:15]  # Limit for performance
-```
-
-### Phase 3: Retry Logic for Grounding
-When ResearcherAgent returns zero sources:
-1. Log warning
-2. Retry with stronger prompt
-3. Fallback to URL context with known documentation URLs
-
----
-
 ## 📁 Key Files
 
 | File | Purpose |
