@@ -2,7 +2,8 @@
 
 A multi-agent LLM APP that generates Google Earth Engine code for given a research objective, date/time, lat/long, and any specific methodology. Strictly uses Gemini 3 Pro, made for GEMINI 3 Hackathon.
 
-MCGEE is a MVP project who's objective is to leverage deep research and code writing capabilities to make remote sensing code generation accessible to everyone.
+MCGEE is a MVP project, with the objective to leverage multiple agents and their deep research capabilities and code writing capabilities of LLMs to make remote sensing code generation accessible to everyone.
+
 
 ---
 
