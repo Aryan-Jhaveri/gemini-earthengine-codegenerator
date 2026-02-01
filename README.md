@@ -6,6 +6,26 @@ MCGEE is a MVP project who's objective is to leverage deep research and code wri
 
 ---
 
+## 🎬 Demo Video
+
+| Example | Step | Video |
+|---------|------|-------|
+| Setup | Initialization | <a href="https://youtu.be/_hWtLnabNxg?t=0" target="_blank">![setup](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
+| **Floods in Pakistan** | Thinking | <a href="https://youtu.be/_hWtLnabNxg?t=12" target="_blank">![thinking-1](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
+| | Sources | <a href="https://youtu.be/_hWtLnabNxg?t=41" target="_blank">![sources-1](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
+| | Thought Logs | <a href="https://youtu.be/_hWtLnabNxg?t=64" target="_blank">![logs-1](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
+| | Pasting Code | <a href="https://youtu.be/_hWtLnabNxg?t=71" target="_blank">![code-1](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
+| **Mining Detection in Peru** | Thinking | <a href="https://youtu.be/_hWtLnabNxg?t=102" target="_blank">![thinking-2](https://img.youtube.com/vi/_hWtLnabNxg/2.jpg)</a> |
+| | Sources | <a href="https://youtu.be/_hWtLnabNxg?t=130" target="_blank">![sources-2](https://img.youtube.com/vi/_hWtLnabNxg/2.jpg)</a> |
+| | Pasting Code | <a href="https://youtu.be/_hWtLnabNxg?t=155" target="_blank">![code-2](https://img.youtube.com/vi/_hWtLnabNxg/2.jpg)</a> |
+| **Urban Heat Island - Tokyo** | Thinking | <a href="https://youtu.be/_hWtLnabNxg?t=211" target="_blank">![thinking-3](https://img.youtube.com/vi/_hWtLnabNxg/3.jpg)</a> |
+| | Refining Code | <a href="https://youtu.be/_hWtLnabNxg?t=227" target="_blank">![refine-3](https://img.youtube.com/vi/_hWtLnabNxg/3.jpg)</a> |
+| | Pasting Code | <a href="https://youtu.be/_hWtLnabNxg?t=279" target="_blank">![code-3](https://img.youtube.com/vi/_hWtLnabNxg/3.jpg)</a> |
+
+**▶️ [Watch Full Demo on YouTube](https://www.youtube.com/watch?v=_hWtLnabNxg)**
+
+---
+
 ## What It Does
 
 ```mermaid
