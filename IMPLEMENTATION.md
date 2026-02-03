@@ -17,6 +17,12 @@ A working multi-agent system that generates Earth Engine JavaScript code from na
 
 ---
 
+## 🚀 Next Steps
+
+ - Chat History for recent chats, clicking results in dashboard overlaying to previous states (??)
+ - Fix Code agent thought truncation
+
+
 ## ⚠️ Known Limitations
 
 ### 1. Grounding is Optional

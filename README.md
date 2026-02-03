@@ -1,158 +1,99 @@
 # MCGEE - Multiagent Code-generator for Google Earth Engine 🛰️
 
-A multi-agent LLM APP that generates Google Earth Engine code for given a research objective, date/time, lat/long, and any specific methodology. Strictly uses Gemini 3 Pro, made for GEMINI 3 Hackathon.
+A multi-agent LLM app that generates Google Earth Engine code. Give it a research objective, location, and time range — get working code.
 
-MCGEE is a MVP project, with the objective to leverage multiple agents and their deep research capabilities and code writing capabilities of LLMs to make remote sensing code generation accessible to everyone.
-
-
----
-
-## 🎬 Demo Video
-
-| Example | Step | Video |
-|---------|------|-------|
-| Setup | Initialization | <a href="https://youtu.be/_hWtLnabNxg?t=0" target="_blank">![setup](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
-| **Floods in Pakistan** | Thinking | <a href="https://youtu.be/_hWtLnabNxg?t=12" target="_blank">![thinking-1](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
-| | Sources | <a href="https://youtu.be/_hWtLnabNxg?t=41" target="_blank">![sources-1](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
-| | Thought Logs | <a href="https://youtu.be/_hWtLnabNxg?t=64" target="_blank">![logs-1](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
-| | Pasting Code | <a href="https://youtu.be/_hWtLnabNxg?t=71" target="_blank">![code-1](https://img.youtube.com/vi/_hWtLnabNxg/1.jpg)</a> |
-| **Mining Detection in Peru** | Thinking | <a href="https://youtu.be/_hWtLnabNxg?t=102" target="_blank">![thinking-2](https://img.youtube.com/vi/_hWtLnabNxg/2.jpg)</a> |
-| | Sources | <a href="https://youtu.be/_hWtLnabNxg?t=130" target="_blank">![sources-2](https://img.youtube.com/vi/_hWtLnabNxg/2.jpg)</a> |
-| | Pasting Code | <a href="https://youtu.be/_hWtLnabNxg?t=155" target="_blank">![code-2](https://img.youtube.com/vi/_hWtLnabNxg/2.jpg)</a> |
-| **Urban Heat Island - Tokyo** | Thinking | <a href="https://youtu.be/_hWtLnabNxg?t=211" target="_blank">![thinking-3](https://img.youtube.com/vi/_hWtLnabNxg/3.jpg)</a> |
-| | Refining Code | <a href="https://youtu.be/_hWtLnabNxg?t=227" target="_blank">![refine-3](https://img.youtube.com/vi/_hWtLnabNxg/3.jpg)</a> |
-| | Pasting Code | <a href="https://youtu.be/_hWtLnabNxg?t=279" target="_blank">![code-3](https://img.youtube.com/vi/_hWtLnabNxg/3.jpg)</a> |
-
-**▶️ [Watch Full Demo on YouTube](https://www.youtube.com/watch?v=_hWtLnabNxg)**
+Built with Gemini 3 Pro for the Gemini 3 Hackathon.
 
 ---
 
-## What It Does
+## Demo
 
-```mermaid
-graph LR
-    A[You Ask a Question] --> B[4 AI Agents Work Together]
-    B --> C[Get Earth Engine Code]
-    C --> D[Paste & Run in Code Editor]
-    
-    style A fill:#3b82f6
-    style B fill:#8b5cf6
-    style C fill:#10b981
-    style D fill:#f59e0b
-```
-
-**The agents:**
-- � **Planner** - Breaks your question into steps
-- 🔬 **Researcher** - Finds the best satellites and methods
-- 💻 **Coder** - Writes the Earth Engine script
-- 📝 **Synthesizer** - Explains what it did
-
-You can watch them think in real-time!
+**▶️ [Watch Demo on YouTube](https://www.youtube.com/watch?v=_hWtLnabNxg)**
 
 ---
 
-## Quick Start
+## How to Run
 
-### 1. Get Your API Key
-You need a [Google AI API key](https://aistudio.google.com/app/apikey) (free).
+### Prerequisites
 
-### 2. Setup
+- Python 3.10+
+- Node.js 18+
+- [Google AI API key](https://aistudio.google.com/app/apikey) (free)
+
+### 1. Clone & Setup
 
 ```bash
-# Copy the example file
+git clone https://github.com/Aryan-Jhaveri/gemini-earthengine-codegenerator.git
+cd gemini-earthengine-codegenerator
+
+# Create environment file
 cp .env.example .env
-
-# Add your API key to .env
-GOOGLE_API_KEY=your-key-here
 ```
 
-### 3. Install
+Edit `.env` and add your API key:
+```
+GOOGLE_API_KEY=your-api-key-here
+```
+
+### 2. Install Dependencies
 
 ```bash
-# Python packages
+# Backend
 pip install -r requirements.txt
 
-# Frontend packages
-cd app && npm install
+# Frontend
+cd app && npm install && cd ..
 ```
 
-### 4. Run
+### 3. Run
 
 ```bash
 ./start.sh
 ```
 
-Open http://localhost:3000
+Open **http://localhost:3000**
 
 ---
 
-## How It Works
+## Docker (Alternative)
 
-```mermaid
-graph TB
-    User[🧑 You Type a Question] --> Chat[💬 Chat Agent]
-    
-    Chat --> Orch[🎯 Orchestrator]
-    
-    Orch --> Plan[📋 Planner<br/>Breaks into tasks]
-    Orch --> Research[🔬 Researcher<br/>Finds data & methods]
-    Orch --> Code[💻 Coder<br/>Writes the script]
-    Orch --> Synth[📝 Synthesizer<br/>Explains the approach]
-    
-    Plan -.->|thoughts| WS[📡 WebSocket]
-    Research -.->|thoughts| WS
-    Code -.->|thoughts| WS
-    Synth -.->|thoughts| WS
-    
-    WS --> UI[🖥️ Your Browser]
-    
-    Code --> Result[✅ Earth Engine Script]
-    
-    style User fill:#3b82f6,color:#fff
-    style Result fill:#10b981,color:#fff
-    style WS fill:#8b5cf6,color:#fff
+If you have Docker installed:
+
+```bash
+docker compose up --build
 ```
 
-All agents stream their thoughts live so you can see the reasoning.
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| Port already in use | `lsof -ti:8000 | xargs kill -9` |
+| Module not found | Make sure you ran `pip install -r requirements.txt` |
+| API key error | Check your `.env` file |
 
 ---
 
-## Example Questions
-
-Try these:
+## Example Prompts
 
 - "Analyze Amazon deforestation from 2020-2023"
-- "Show California wildfire burn scars"
 - "Detect floods in Bangladesh using radar"
-- "Track urban growth in Tokyo"
 - "Calculate NDVI for farms in Iowa"
-
----
-
-## Tech Stack
-
-| Part | Tech |
-|------|------|
-| **Agents** | Google Gemini 3 Pro |
-| **Backend** | Python + FastAPI |
-| **Frontend** | Next.js + TypeScript |
-| **Streaming** | WebSocket |
-| **Target** | Google Earth Engine |
 
 ---
 
 ## Project Structure
 
 ```
-orbital-insight/
-├── agents/          # The 4 AI agents
+mcgee/
+├── agents/          # AI agents (Planner, Researcher, Coder, Synthesizer)
 ├── api/             # FastAPI backend
 ├── app/             # Next.js frontend
-└── start.sh         # Run everything
+└── start.sh         # Run script
 ```
 
 ---
-
 
 ## License
 
