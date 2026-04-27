@@ -63,10 +63,24 @@ async def stream_completion(
     if extra:
         kwargs.update(extra)
 
+    accumulated_in = 0
+    accumulated_out = 0
+
     response = await litellm.acompletion(**kwargs)
     async for chunk in response:
         for event in _normalise(chunk):
+            if event["kind"] == "usage":
+                accumulated_in += event["content"].get("input_tokens", 0)
+                accumulated_out += event["content"].get("output_tokens", 0)
             yield event
+
+    # Log after the stream is exhausted so we have final token counts
+    if accumulated_in or accumulated_out:
+        try:
+            from .usage_tracker import log_usage
+            log_usage(role, model, accumulated_in, accumulated_out)
+        except Exception:
+            pass  # never let logging break the pipeline
 
 
 def raw_client(role: str) -> Any:

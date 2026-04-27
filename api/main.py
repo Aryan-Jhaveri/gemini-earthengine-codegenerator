@@ -25,6 +25,7 @@ load_dotenv()
 from agents.orchestrator import orchestrator
 from agents.memory import shared_memory
 from agents.chat_agent import chat_agent
+from agents.usage_tracker import get_metrics
 
 
 app = FastAPI(
@@ -128,6 +129,12 @@ async def get_latest_script():
     if script:
         return script.to_dict()
     return {"message": "No scripts generated yet"}
+
+
+@app.get("/metrics")
+async def metrics():
+    """Return per-role token usage and estimated cost breakdown."""
+    return get_metrics()
 
 
 @app.delete("/clear")
