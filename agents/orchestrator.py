@@ -1,11 +1,9 @@
 """
-Agent Orchestrator — coordinates the Planner → Researcher → Coder → Validator → Synthesizer pipeline.
+Agent Orchestrator — Supervisor → Researcher → Coder ↔ Validator → Synthesizer.
 
-The Coder/Validator pair runs in a retry loop (max 3 attempts): if the Validator
-finds errors, the error summary is fed back to the Coder as a follow-up message.
+The Supervisor routes intent; for full_pipeline and code_only intents the
+Coder/Validator pair runs in a retry loop (max 3 attempts).
 """
-
-from typing import Optional
 
 from .memory import shared_memory, AgentType
 from .chat_agent import chat_agent
@@ -14,6 +12,7 @@ from .coder import coder_agent
 from .planner import planner_agent
 from .synthesizer import synthesizer_agent
 from .validator import validator_agent
+from .supervisor import supervisor_agent
 
 MAX_RETRIES = 3
 
@@ -26,9 +25,21 @@ class AgentOrchestrator:
         self.planner = planner_agent
         self.synthesizer = synthesizer_agent
         self.validator = validator_agent
+        self.supervisor = supervisor_agent
 
     async def process_user_message(self, message: str) -> dict:
-        """Main entry point for user messages. Routes through Chat Agent."""
+        """
+        Main entry point. The Supervisor classifies intent:
+          - chat         → handled directly by Chat Agent (no pipeline)
+          - full_pipeline / research_only / code_only → Chat Agent delegates to pipeline
+        """
+        intent = await self.supervisor.route(message)
+
+        if intent == "chat":
+            # Conversational response — skip Research/Coder/Synthesizer entirely
+            return await self.chat._handle_general(message)
+
+        # For all other intents, let the Chat Agent handle classification and delegation
         return await self.chat.process_message(message)
 
     async def run_full_analysis(
@@ -42,14 +53,14 @@ class AgentOrchestrator:
           Planner → Researcher → Coder ↔ Validator (retry loop) → Synthesizer
 
         Args:
-            query:            Analysis query from the user
+            query:             Analysis query from the user
             use_deep_research: Use Deep Research mode for the Researcher
-            context_urls:     Optional URL list for URL-context grounding
+            context_urls:      Optional URL list for URL-context grounding
 
         Returns:
             Complete analysis results dict
         """
-        # Step 0: Plan the mission
+        # Step 0: Plan the mission (will be replaced by Supervisor task decomposition in a future phase)
         tasks = await self.planner.plan(query)
 
         # Step 1: Research
@@ -87,11 +98,10 @@ class AgentOrchestrator:
         max_retries: int = MAX_RETRIES,
     ) -> dict:
         """
-        Run the Coder then validate output; retry on validation failure.
+        Run the Coder then validate; retry on failure up to max_retries times.
 
-        On each retry the error summary is appended to the research context so
-        the Coder knows what to fix. Caps at max_retries attempts and returns
-        the last result even if still invalid, including the final error list.
+        Validation errors are injected back into the research context so the Coder
+        knows exactly what to fix on the next attempt.
         """
         current_research = research_result
         last_result: dict = {}
@@ -108,7 +118,7 @@ class AgentOrchestrator:
             if "error" in code_result:
                 last_result = code_result
                 last_errors = [code_result["error"]]
-                break  # Coder itself failed — no point retrying without different context
+                break  # Coder itself failed — retrying without new context is pointless
 
             code = code_result.get("code", "")
             validation = await self.validator.validate(code)
@@ -117,25 +127,24 @@ class AgentOrchestrator:
             last_errors = validation["errors"]
 
             if validation["valid"]:
-                break  # Code passed validation
+                break
 
             if attempt < max_retries:
                 error_summary = "; ".join(validation["errors"][:3])
                 shared_memory.add_thought(
-                    AgentType_from_import(),
+                    AgentType.PLANNER,
                     f"🔄 Retry {attempt}/{max_retries} — fixing: {error_summary}",
                 )
-                # Feed errors back to the Coder via research context
                 current_research = dict(research_result)
                 current_research["_validation_errors"] = validation["errors"]
                 current_research["research"] = (
                     research_result.get("research", "")
-                    + f"\n\n⚠️ Previous code had these validation errors — fix them:\n"
+                    + "\n\n⚠️ Previous code had validation errors — fix them:\n"
                     + "\n".join(f"- {e}" for e in validation["errors"])
                 )
             else:
                 shared_memory.add_thought(
-                    AgentType_from_import(),
+                    AgentType.PLANNER,
                     f"⚠️ Exhausted {max_retries} retries — returning last result with errors noted",
                 )
 
