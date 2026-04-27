@@ -3,32 +3,16 @@ Synthesizer Agent - Methodology Report with Citations
 
 Compiles research findings into a structured methodology report with inline citations.
 References sources as [1], [2], etc. for proper academic-style citation.
+Now uses the unified llm.stream_completion() abstraction (anthropic/claude-haiku-4-5).
 """
 
-from google import genai
-from google.genai import types
 from typing import Optional, Dict, Any
-import os
 
 from .memory import shared_memory, AgentType
+from .llm import stream_completion
 
 
-class SynthesizerAgent:
-    """
-    Synthesizer Agent for methodology report generation.
-    
-    Capabilities:
-    - Compile research findings with inline citations
-    - Generate structured methodology sections
-    - Reference sources as [1], [2], etc.
-    - Create professional-looking reports
-    """
-    
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
-        self.model_name = "gemini-3-pro-preview"
-        
-        self.system_prompt = """You are a research synthesizer for geospatial analysis.
+SYSTEM_PROMPT = """You are a research synthesizer for geospatial analysis.
 
 Create clear, well-structured methodology reports with proper citations.
 Use [1], [2] etc. for inline citations referencing the provided sources.
@@ -42,51 +26,55 @@ Report Structure:
 
 Use academic writing style with clear sections and proper citations."""
 
+
+class SynthesizerAgent:
+    """
+    Synthesizer Agent for methodology report generation.
+
+    Uses anthropic/claude-haiku-4-5 via llm.stream_completion().
+    """
+
     def _stream_thought(self, content: str) -> None:
-        """Stream a thought to shared memory."""
         shared_memory.add_thought(AgentType.SYNTHESIZER, content)
-    
+
     async def synthesize(
-        self, 
-        research_context: Dict[str, Any], 
+        self,
+        research_context: Dict[str, Any],
         code_context: Optional[Dict[str, Any]] = None,
-        sources: list = None
+        sources: list = None,
     ) -> Dict[str, Any]:
         """
         Create methodology report with inline citations.
-        
+
         Args:
             research_context: Research findings including sources and queries
-            code_context: Optional generated code context
-            sources: Optional explicitly passed sources from orchestrator (validated)
-        
+            code_context:     Optional generated code context
+            sources:          Explicitly passed validated sources from orchestrator
+
         Returns:
             Dict with methodology report and metadata
         """
         self._stream_thought("📝 Synthesizing methodology report with citations...")
-        
-        # Extract components from research context
-        # Prefer explicitly passed sources (validated by orchestrator)
+
         validated_sources = sources if sources else research_context.get("sources", [])
         search_queries = research_context.get("search_queries", [])
         research_text = research_context.get("research", "")
         datasets = research_context.get("datasets", [])
-        
-        # Format sources for citation reference
-        if validated_sources and len(validated_sources) > 0:
+
+        if validated_sources:
             source_list = "\n".join([
                 f"[{i+1}] {s.get('title', 'Unknown Source')}: {s.get('uri', '')}"
                 for i, s in enumerate(validated_sources)
             ])
             self._stream_thought(f"📚 Including {len(validated_sources)} validated sources for citation")
         else:
-            source_list = "⚠️ NO EXTERNAL SOURCES AVAILABLE - Do not include a References section or create fake citations"
-            self._stream_thought("⚠️ No validated sources available - citations will be omitted")
-            self._stream_thought("📢 Report will note that no external sources were retrieved by web grounding")
-        
-        # Build comprehensive prompt
-        prompt = f"""
-Create a comprehensive methodology report for this geospatial analysis.
+            source_list = (
+                "⚠️ NO EXTERNAL SOURCES AVAILABLE — "
+                "Do not include a References section or create fake citations"
+            )
+            self._stream_thought("⚠️ No validated sources available — citations will be omitted")
+
+        prompt = f"""Create a comprehensive methodology report for this geospatial analysis.
 
 Research Findings:
 {research_text}
@@ -131,95 +119,71 @@ Numbered list of all sources cited above:
 [2] Second source
 etc.
 
-Use clear, professional language with proper inline citations throughout.
-"""
-        
+Use clear, professional language with proper inline citations throughout."""
+
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
+
+        methodology = ""
+        thought_count = 0
+        input_tokens = 0
+        output_tokens = 0
+
+        self._stream_thought("💭 Organizing methodology structure...")
+
         try:
-            client = genai.Client(api_key=self.api_key)
-            
-            # Config with Thinking Mode
-            config = types.GenerateContentConfig(
-                system_instruction=self.system_prompt,
-                thinking_config=types.ThinkingConfig(
-                    include_thoughts=True,
-                    thinking_budget=1024
-                )
-            )
-            
-            self._stream_thought("💭 Organizing methodology structure...")
-            
-            # Use sync streaming wrapped in thread to not block event loop
-            import asyncio
-            
-            def run_streaming():
-                """Run sync streaming in a thread."""
-                thought_count = 0
-                methodology = ""
-                
-                response_stream = client.models.generate_content_stream(
-                    model=self.model_name,
-                    contents=prompt,
-                    config=config
-                )
-                
-                for chunk in response_stream:
-                    if hasattr(chunk, 'candidates') and chunk.candidates:
-                        for candidate in chunk.candidates:
-                            if hasattr(candidate, 'content') and candidate.content:
-                                for part in candidate.content.parts:
-                                    if hasattr(part, 'thought') and part.thought:
-                                        thought_count += 1
-                                        self._stream_thought(f"💭 [{thought_count}] {part.text}")
-                                    elif hasattr(part, 'text') and part.text:
-                                        methodology += part.text
-                    elif chunk.text:
-                        methodology += chunk.text
-                
-                return methodology, thought_count
-            
-            # Run in thread to avoid blocking event loop
-            methodology, thought_count = await asyncio.to_thread(run_streaming)
-            
+            async for event in stream_completion(
+                "synthesizer",
+                messages,
+                thinking=True,
+                thinking_budget=1024,
+            ):
+                kind = event["kind"]
+                if kind == "thought":
+                    thought_count += 1
+                    self._stream_thought(f"💭 [{thought_count}] {event['content']}")
+                elif kind == "text":
+                    methodology += event["content"]
+                elif kind == "usage":
+                    input_tokens = event["content"].get("input_tokens", 0)
+                    output_tokens = event["content"].get("output_tokens", 0)
+
             if thought_count > 0:
                 self._stream_thought(f"✅ Completed {thought_count} thinking steps")
-            
-            # Token counting
-            try:
-                count_resp = client.models.count_tokens(
-                    model=self.model_name,
-                    contents=prompt
+
+            if input_tokens or output_tokens:
+                self._stream_thought(
+                    f"📊 Token Analysis — Input: {input_tokens} / Output: {output_tokens}"
                 )
-                self._stream_thought(f"📊 Token Analysis - Input Token Count: {count_resp.total_tokens}")
-            except Exception as tok_err:
-                print(f"Token count error: {tok_err}")
-            
-            # Log preview
-            preview = methodology[:300] + "..." if len(methodology) > 300 else methodology
-            self._stream_thought(f"✅ Methodology report complete ({len(methodology)} chars)")
-            
-            # Store in research context
+
+            self._stream_thought(
+                f"✅ Methodology report complete ({len(methodology)} chars)"
+            )
+
             shared_memory.set_research_context("methodology_report", {
                 "report": methodology,
                 "sources": validated_sources,
                 "search_queries": search_queries,
-                "datasets": datasets
+                "datasets": datasets,
             })
-            
+
             return {
                 "methodology": methodology,
                 "sources": validated_sources,
                 "search_queries": search_queries,
                 "datasets": datasets,
-                "citation_count": len(validated_sources)
+                "citation_count": len(validated_sources),
             }
-            
+
         except Exception as e:
-            error_msg = f"Synthesis error: {str(e)}"
+            error_msg = f"Synthesis error: {e}"
             self._stream_thought(error_msg)
             return {
                 "methodology": f"Error generating report: {error_msg}",
-                "sources": validated_sources if 'validated_sources' in dir() else [],
-                "error": error_msg
+                "sources": validated_sources,
+                "error": error_msg,
             }
 
 
