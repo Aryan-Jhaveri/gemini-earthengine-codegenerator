@@ -14,6 +14,7 @@ from typing import Optional
 import os
 
 from .memory import shared_memory, AgentType, MessageType
+from .models import get_model
 from .tools.ee_tools import browse_datasets, get_asset_metadata, get_band_schema, get_dataset_docs
 
 
@@ -30,13 +31,11 @@ class ResearcherAgent:
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
-        # genai.configure(api_key=self.api_key) # Deprecated in favor of Client(api_key=...)
-        
-        # Model for Deep Research (asynchronous, comprehensive)
-        self.deep_research_model = "gemini-3-pro-preview"
-        
-        # Model for quick responses
-        self.quick_model = "gemini-3-pro-preview"
+        # Native genai SDK uses bare model IDs (e.g. "gemini-2.5-pro"), not LiteLLM
+        # prefixed strings (e.g. "gemini/gemini-2.5-pro"), so strip the prefix.
+        _model = get_model("researcher").removeprefix("gemini/")
+        self.deep_research_model = _model
+        self.quick_model = _model
         
         self.system_prompt = """You are a Geospatial Research Agent specialized in Google Earth Engine analysis.
 
