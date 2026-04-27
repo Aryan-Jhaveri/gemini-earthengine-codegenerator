@@ -12,7 +12,7 @@ from typing import Optional
 import os
 import re
 
-from .memory import shared_memory, AgentType, MessageType
+from .memory import shared_memory, AgentType
 from .tools.ee_tools import browse_datasets, get_band_schema, preview_collection, get_dataset_docs
 
 
@@ -75,35 +75,6 @@ Output format:
                 self._stream_thought(f"📊 Bands: {schema.get('band_names', [])}")
         
         return context
-    
-    async def ask_researcher(self, question: str) -> str:
-        """
-        Ask the Researcher agent a question.
-        
-        Args:
-            question: Question to ask
-        
-        Returns:
-            Answer from Researcher
-        """
-        self._stream_thought(f"Asking Researcher: {question}")
-        
-        # Record question
-        shared_memory.add_agent_message(
-            from_agent=AgentType.CODER,
-            to_agent=AgentType.RESEARCHER,
-            message_type=MessageType.QUESTION,
-            content=question
-        )
-        
-        # Import here to avoid circular import
-        from .researcher import researcher_agent
-        
-        answer = await researcher_agent.answer_question(question, AgentType.CODER)
-        
-        self._stream_thought(f"Researcher answered: {answer[:100]}...")
-        
-        return answer
     
     async def generate_script(
         self,
