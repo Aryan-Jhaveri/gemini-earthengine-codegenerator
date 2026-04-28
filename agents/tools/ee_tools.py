@@ -14,20 +14,25 @@ import os
 
 def initialize_ee() -> bool:
     """Initialize Earth Engine. Returns True if successful."""
-    try:
-        project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("EE_PROJECT_ID")
+    project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("EE_PROJECT_ID")
+
+    def _init():
+        """Try with project kwarg first; fall back for older SDK versions."""
         if project:
-            ee.Initialize(project=project)
-        else:
-            ee.Initialize()
+            try:
+                ee.Initialize(project=project)
+                return
+            except TypeError:
+                pass  # older earthengine-api doesn't accept project=
+        ee.Initialize()
+
+    try:
+        _init()
         return True
     except Exception:
         try:
             ee.Authenticate()
-            if project:
-                ee.Initialize(project=project)
-            else:
-                ee.Initialize()
+            _init()
             return True
         except Exception as e:
             print(f"Failed to initialize Earth Engine: {e}")
@@ -269,33 +274,3 @@ def get_dataset_docs(asset_id: str) -> str:
     catalog_id = asset_id.replace("/", "_")
     
     return DOCS.get(asset_id, f"{base_url}{catalog_id}")
-
-
-# Tool definitions for LangChain
-EE_TOOLS = [
-    {
-        "name": "browse_datasets",
-        "description": "Search for Earth Engine datasets matching keywords. Returns dataset IDs and types.",
-        "function": browse_datasets
-    },
-    {
-        "name": "get_asset_metadata", 
-        "description": "Get full metadata for an Earth Engine asset including bands and properties.",
-        "function": get_asset_metadata
-    },
-    {
-        "name": "get_band_schema",
-        "description": "Get band names, types for a collection. Use before generating code to get correct band names.",
-        "function": get_band_schema
-    },
-    {
-        "name": "preview_collection",
-        "description": "Preview available images in a collection for a date range. Check data availability.",
-        "function": preview_collection
-    },
-    {
-        "name": "get_dataset_docs",
-        "description": "Get documentation URL for a dataset.",
-        "function": get_dataset_docs
-    }
-]
