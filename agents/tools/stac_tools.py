@@ -207,6 +207,16 @@ ANTHROPIC_GET_DATASET_SCHEMA = {
     },
 }
 
+# OpenAI / LiteLLM function-calling format (LiteLLM converts to Anthropic tool_use)
+LITELLM_GET_DATASET_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "get_dataset_schema",
+        "description": GET_DATASET_SCHEMA_DECL["description"],
+        "parameters": GET_DATASET_SCHEMA_DECL["parameters"],
+    },
+}
+
 # Dispatch map: tool name → callable (used by the Coder's tool loop)
 STAC_TOOL_DISPATCH: dict = {
     "get_dataset_schema": get_dataset_schema,

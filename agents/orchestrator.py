@@ -9,7 +9,6 @@ from .memory import shared_memory, AgentType
 from .chat_agent import chat_agent
 from .researcher import researcher_agent
 from .coder import coder_agent
-from .planner import planner_agent
 from .synthesizer import synthesizer_agent
 from .validator import validator_agent
 from .supervisor import supervisor_agent
@@ -22,7 +21,6 @@ class AgentOrchestrator:
         self.chat = chat_agent
         self.researcher = researcher_agent
         self.coder = coder_agent
-        self.planner = planner_agent
         self.synthesizer = synthesizer_agent
         self.validator = validator_agent
         self.supervisor = supervisor_agent
@@ -60,9 +58,6 @@ class AgentOrchestrator:
         Returns:
             Complete analysis results dict
         """
-        # Step 0: Plan the mission (will be replaced by Supervisor task decomposition in a future phase)
-        tasks = await self.planner.plan(query)
-
         # Step 1: Research
         research_result = await self.researcher.research(
             query,
@@ -82,7 +77,6 @@ class AgentOrchestrator:
         )
 
         return {
-            "tasks": tasks,
             "research": research_result,
             "code": code_result,
             "methodology": methodology,

@@ -144,7 +144,7 @@ class ChatAgent:
             return {"type": "error", "content": "No script to refine. Please request an analysis first."}
 
         from .coder import coder_agent
-        refined_code = coder_agent.refine_script(current_script.code, message)
+        refined_code = await coder_agent.refine_script(current_script.code, message)
         response_text = "I've updated the script based on your request."
         shared_memory.add_conversation_turn("assistant", response_text)
         return {"type": "refinement_complete", "content": response_text, "code": refined_code}

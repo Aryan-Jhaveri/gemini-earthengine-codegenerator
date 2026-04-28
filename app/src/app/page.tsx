@@ -124,8 +124,75 @@ const PRESET_EXAMPLES = [
       endDate: "2024-09-30",
       methodologyNotes: "Use Sentinel-1 SAR for cloud-penetrating flood detection. Compare pre/post-flood water extent."
     }
-  }
+  },
+  {
+    name: "Sanctions Evasion — Bandar Abbas Port (Iran)",
+    data: {
+      objective: "Monitor vessel traffic and port loading activity at Bandar Abbas to detect potential sanctions-evasion ship-to-ship oil transfers in the Strait of Hormuz",
+      latitude: "27.12",
+      longitude: "56.27",
+      startDate: "2023-01-01",
+      endDate: "2024-12-01",
+      methodologyNotes: "Use Sentinel-1 GRD IW mode VV polarization for vessel detection via constant false alarm rate (CFAR) thresholding on bright returns. Identify stationary vessel clusters in anchorage areas (potential STS transfers). Cross-reference with port berth change detection using Sentinel-2 RGB composites. Flag anomalous nighttime thermal signatures using VIIRS DNB for flaring activity."
+    }
+  },
+  {
+    name: "Poppy Cultivation Mapping (Helmand, Afghanistan)",
+    data: {
+      objective: "Map opium poppy cultivation extent and detect harvest timing in Helmand Province using crop phenology signatures",
+      latitude: "31.35",
+      longitude: "64.38",
+      startDate: "2023-10-01",
+      endDate: "2024-06-01",
+      methodologyNotes: "Exploit poppy's distinctive NDVI phenology: rapid green-up December–February, peak NDVI March–April, sharp senescence by May. Use Sentinel-2 10-day composites to derive NDVI time-series per field parcel. Apply NDRE (Red-Edge Normalized Difference) using B05/B04 to differentiate poppy from wheat (similar NDVI but different red-edge response). Classify using temporal shape matching against known poppy calendar."
+    }
+  },
+  {
+    name: "Conflict Damage Assessment (Gaza Strip)",
+    data: {
+      objective: "Quantify building destruction and infrastructure damage in urban areas using SAR coherence loss and optical change detection",
+      latitude: "31.35",
+      longitude: "34.31",
+      startDate: "2023-10-01",
+      endDate: "2024-06-01",
+      methodologyNotes: "Use Sentinel-1 interferometric coherence change detection: pre-event coherence minus post-event coherence highlights destroyed structures as decorrelation zones. Compute coherence from SLC pairs using COPERNICUS/S1_GRD. Validate with Sentinel-2 multitemporal RGB composites (B04, B03, B02) to visually confirm rubble signatures. Aggregate damage estimates by neighborhood grid cells (500m)."
+    }
+  },
+  {
+    name: "North Korea Crop Failure Early Warning",
+    data: {
+      objective: "Detect agricultural stress and potential food shortfall risk in North Korean farming regions using NDVI anomaly against multi-year baseline",
+      latitude: "38.92",
+      longitude: "125.73",
+      startDate: "2022-04-01",
+      endDate: "2024-10-01",
+      methodologyNotes: "Use MODIS MOD13A2 16-day NDVI composites at 1km. Compute per-pixel NDVI anomaly against 2010–2021 climatological mean for each day-of-year. Focus on key agricultural provinces: South Hwanghae and North Hwanghae plains. Supplement with Landsat 8/9 to detect flooded paddy fields (NDWI > 0 in June) and drought stress (LST anomaly). Flag counties where growing-season cumulative NDVI falls >15% below baseline."
+    }
+  },
+  {
+    name: "Illegal Fishing Detection (West Africa EEZ)",
+    data: {
+      objective: "Detect dark vessel fishing activity in Guinean Exclusive Economic Zone using SAR vessel detection for vessels not broadcasting AIS",
+      latitude: "10.42",
+      longitude: "-15.58",
+      startDate: "2023-01-01",
+      endDate: "2024-12-01",
+      methodologyNotes: "Apply CFAR vessel detection on Sentinel-1 IW GRD VV/VH imagery to produce vessel point detections. Filter by vessel size proxy (bright return area > 50m²) to exclude small coastal craft. Identify detections that fall within known industrial fishing grounds (>12nm from shore) without AIS transponder registration — the gap between SAR detections and AIS density heatmaps indicates dark vessels. Produce monthly density heatmaps of unregistered activity."
+    }
+  },
+  {
+    name: "Military Base Construction (South China Sea)",
+    data: {
+      objective: "Monitor artificial island expansion and military infrastructure build-up on Fiery Cross Reef using multitemporal change detection",
+      latitude: "9.55",
+      longitude: "114.23",
+      startDate: "2020-01-01",
+      endDate: "2024-12-01",
+      methodologyNotes: "Use Sentinel-2 true-color and false-color composites (B8A, B04, B03) to map reclaimed land extent quarterly. Apply NDWI to extract precise shoreline and distinguish land from shallow reef. Use Sentinel-1 SAR to image through cloud cover for consistent monitoring. Compute area change in hectares per quarter. Flag new hard structures (hangars, radar installations) via texture analysis on high-backscatter SAR returns."
+    }
+  },
 ];
+
 
 export default function Home() {
   const [formData, setFormData] = useState<FormData>({
@@ -339,9 +406,9 @@ ${formData.methodologyNotes ? `Methodology Notes: ${formData.methodologyNotes}` 
             </div>
             <div>
               <h1 className="text-xl font-semibold tracking-tight">
-                Google Earth Engine GEO AI
+                MCGEE
               </h1>
-              <p className="text-xs text-slate-400">POWERED BY GEMINI 3</p>
+              <p className="text-xs text-slate-400">MULTIAGENT CODE-GENERATOR FOR GOOGLE EARTH ENGINE</p>
             </div>
           </div>
           <div className="flex items-center gap-4">

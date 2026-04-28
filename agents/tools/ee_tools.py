@@ -14,20 +14,25 @@ import os
 
 def initialize_ee() -> bool:
     """Initialize Earth Engine. Returns True if successful."""
-    try:
-        project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("EE_PROJECT_ID")
+    project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("EE_PROJECT_ID")
+
+    def _init():
+        """Try with project kwarg first; fall back for older SDK versions."""
         if project:
-            ee.Initialize(project=project)
-        else:
-            ee.Initialize()
+            try:
+                ee.Initialize(project=project)
+                return
+            except TypeError:
+                pass  # older earthengine-api doesn't accept project=
+        ee.Initialize()
+
+    try:
+        _init()
         return True
     except Exception:
         try:
             ee.Authenticate()
-            if project:
-                ee.Initialize(project=project)
-            else:
-                ee.Initialize()
+            _init()
             return True
         except Exception as e:
             print(f"Failed to initialize Earth Engine: {e}")

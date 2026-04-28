@@ -12,18 +12,17 @@ A multi-agent LLM system that generates Google Earth Engine JavaScript from a pl
 
 ## Architecture
 
-Six specialised agents collaborate in a pipeline:
+Five specialised agents collaborate in a pipeline:
 
 ```
-Supervisor → Planner → Researcher → Coder ↔ Validator (retry ×3) → Synthesizer
+Supervisor → Researcher → Coder ↔ Validator (retry ×3) → Synthesizer
 ```
 
 | Agent | Model | Role |
 |-------|-------|------|
 | **Supervisor** | Gemini 2.5 Flash | Routes intent (full pipeline / chat) |
-| **Planner** | Gemini 2.5 Flash | Decomposes the mission into tasks |
 | **Researcher** | Gemini 2.5 Pro + Google Search | Finds methodology & datasets |
-| **Coder** | Claude Sonnet 4.5 (default) | Generates EE JavaScript |
+| **Coder** | Claude Sonnet 4.5 (default) | Generates EE JavaScript with STAC tool-calling |
 | **Validator** | Gemini 2.5 Flash + STAC index | Checks band names & dataset IDs |
 | **Synthesizer** | Claude Haiku 4.5 | Writes a methodology report with citations |
 
@@ -50,14 +49,23 @@ cp .env.example .env
 # Edit .env — add GOOGLE_API_KEY and ANTHROPIC_API_KEY at minimum
 ```
 
-### 2. Install Dependencies
+### 2. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
-cd app && npm install && cd ..
 ```
 
-### 3. Run
+### 3. Install frontend dependencies
+
+```bash
+cd app
+npm install
+cd ..
+```
+
+> **Note:** `npm install` must be run from inside the `app/` directory, not the project root.
+
+### 4. Run
 
 ```bash
 ./start.sh
@@ -69,9 +77,40 @@ cd app && npm install && cd ..
 
 ## Docker
 
+Both services (backend + frontend) are containerised. The compose file wires them together so you only need one command.
+
+### 1. Set up environment variables
+
+```bash
+cp .env.example .env
+# Edit .env and fill in at minimum:
+#   GOOGLE_API_KEY      — from https://aistudio.google.com/app/apikey
+#   ANTHROPIC_API_KEY   — from https://console.anthropic.com/
+```
+
+### 2. Build and run
+
 ```bash
 docker compose up --build
 ```
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+
+### 3. Stop
+
+```bash
+docker compose down
+```
+
+### Notes
+
+- The `.env` file is read automatically by `docker compose` — do not commit it to git.
+- Optional model overrides (`MODEL_CODER`, etc.) can be added to `.env` and will be picked up without rebuilding.
+- The backend image only contains the `agents/` and `api/` directories; the frontend image is a standalone Next.js production build.
+- A health check on `GET /health` is configured — the frontend container waits for the backend to be healthy before starting.
 
 ---
 

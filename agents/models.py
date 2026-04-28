@@ -12,12 +12,12 @@ because google_search grounding is only available through the Gemini SDK path.
 import os
 
 MODELS: dict[str, str] = {
-    "supervisor": "gemini/gemini-2.5-flash",
-    "researcher": "gemini/gemini-2.5-pro",   # locked: needs google_search grounding
-    "coder": "anthropic/claude-sonnet-4-5",
-    "validator": "gemini/gemini-2.5-flash",
+    "supervisor":  "anthropic/claude-haiku-4-5",
+    "researcher":  "gemini/gemini-2.5-pro",    # locked — needs google_search grounding
+    "coder":       "anthropic/claude-sonnet-4-5",
+    "validator":   "anthropic/claude-haiku-4-5",
     "synthesizer": "anthropic/claude-haiku-4-5",
-    "chat": "gemini/gemini-2.5-flash",
+    "chat":        "anthropic/claude-haiku-4-5",
 }
 
 

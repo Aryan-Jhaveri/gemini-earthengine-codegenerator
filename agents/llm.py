@@ -124,20 +124,14 @@ def _build_kwargs(
     if tools:
         kwargs["tools"] = tools
 
-    if thinking:
-        if is_anthropic(model):
-            # Anthropic extended thinking — passed via extra_body so LiteLLM
-            # forwards it as-is to the Anthropic API.
-            kwargs.setdefault("extra_body", {})["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": thinking_budget,
-            }
-        elif is_gemini(model):
-            # Gemini thinking config — also forwarded via extra_body.
-            kwargs.setdefault("extra_body", {})["thinking_config"] = {
-                "include_thoughts": True,
-                "thinking_budget": thinking_budget,
-            }
+    if thinking and is_anthropic(model):
+        # LiteLLM native extended thinking param for Anthropic (not via extra_body).
+        # temperature must be 1 when thinking is enabled.
+        kwargs["thinking"] = {
+            "type": "enabled",
+            "budget_tokens": thinking_budget,
+        }
+        kwargs["temperature"] = 1
 
     if is_mulerouter(model):
         kwargs["api_base"] = _mulerouter_base(model)

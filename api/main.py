@@ -29,7 +29,7 @@ from agents.usage_tracker import get_metrics
 
 
 app = FastAPI(
-    title="Orbital Insight API",
+    title="MCGEE API",
     description="Multi-Agent Geointelligence API",
     version="1.0.0"
 )
@@ -69,7 +69,7 @@ active_connections: list[WebSocket] = []
 
 @app.get("/")
 async def root():
-    return {"message": "Orbital Insight API", "status": "running"}
+    return {"message": "MCGEE API", "status": "running"}
 
 
 @app.post("/chat", response_model=ChatResponse)
